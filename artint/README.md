@@ -1,0 +1,12 @@
+* data
+	* raw (original data)
+	* interim (intermediate data post-transformation)
+	* processed (final datasets)
+* models (trained and serialized models)
+* notebooks (jupyter notebooks for miscellaneous use)
+* reports (generated analysis)
+* src (source code)
+	* data (scripts to perform data collection, transformation)
+	* features (scripts to perform feature extraction)
+	* models (train, test, forward pass)
+	* visualization (scripts to create visualizations)
