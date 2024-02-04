@@ -16,7 +16,6 @@ model_repository <br />
     +-- model.onnx <br />
 
 - It is important to note that model-name should not have the same name as the saved onnx model file.
-- 
 - We also do not need the config.pbtxt file as triton will auto generate the information it needs.
 
 ## Running commands for triton server
