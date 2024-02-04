@@ -6,15 +6,14 @@ This README.md goes through the needed model-repository structure and how to run
 
 Starting with the structure with the following:
 
-<model-repository-path>/
-  <model-name>/
-    [config.pbtxt]
-    [<output-labels-file> ...]
-    <version>/
-      <model-definition-file>
-    <version>/
-      <model-definition-file>
-**This strucuture comes directly from https://docs.nvidia.com/deeplearning/triton-inference-server/archives/triton_inference_server_1150/user-guide/docs/model_repository.html
+model_repository
+|
++-- resnet
+    |
+    +-- config.pbtxt
+    +-- 1
+        |
+        +-- model.onnx
 
 It is important to note that model-name should not have the same name as the saved onnx model file.
 
