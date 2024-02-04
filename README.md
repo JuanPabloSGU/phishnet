@@ -6,16 +6,18 @@ This README.md goes through the needed model-repository structure and how to run
 
 Starting with the structure with the following:
 
-model_repository
-|
-+-- resnet
-    |
-    +-- config.pbtxt
-    +-- 1
-        |
-        +-- model.onnx
+model_repository <br />
+| <br />
++-- resnet <br />
+    | <br />
+    +-- config.pbtxt <br />
+    +-- 1 <br />
+        | <br />
+        +-- model.onnx <br />
 
-It is important to note that model-name should not have the same name as the saved onnx model file.
+- It is important to note that model-name should not have the same name as the saved onnx model file.
+- 
+- We also do not need the config.pbtxt file as triton will auto generate the information it needs.
 
 ## Running commands for triton server
 
