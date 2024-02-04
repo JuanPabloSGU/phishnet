@@ -9,11 +9,11 @@ Starting with the structure with the following:
 model_repository <br />
 | <br />
 +-- resnet <br />
+  | <br />
+  +-- config.pbtxt <br />
+  +-- 1 <br />
     | <br />
-    +-- config.pbtxt <br />
-    +-- 1 <br />
-      | <br />
-      +-- model.onnx <br />
+    +-- model.onnx <br />
 
 - It is important to note that model-name should not have the same name as the saved onnx model file.
 - 
