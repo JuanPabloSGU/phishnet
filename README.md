@@ -12,8 +12,8 @@ model_repository <br />
     | <br />
     +-- config.pbtxt <br />
     +-- 1 <br />
-        | <br />
-        +-- model.onnx <br />
+      | <br />
+      +-- model.onnx <br />
 
 - It is important to note that model-name should not have the same name as the saved onnx model file.
 - 
