@@ -1,6 +1,6 @@
 #! bin/bash
-
 export url="https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-ACTIVE.txt"
+
 export output="./output"
 export dom="./output/dom"
 export screenshots="./output/screenshots"
@@ -10,14 +10,12 @@ export API_KEY_URLSCAN=$1
 export API_KEY_GSB=$2
 
 # # Create direcitory if not present
-mkdir -p $output
-mkdir -p $output/$dom
-mkdir -p $output/$screenshots
+mkdir -p output/dom output/screenshots | tr -d '\r'
 
 # Downloads the latest list of phishing urls from Phishing.Database
-curl -L $url > $output/phishing-urls.txt
+curl -L $url > output/phishing-urls.txt | tr -d '\r'
 
-Loop through the list of urls and submit them to urlscan.io
+# Loop through the list of urls and submit them to urlscan.io
 while IFS= read -r url; do
     response=$(curl -s -X POST "https://urlscan.io/api/v1/scan/" \
         -H "Content-Type: application/json" \
@@ -34,10 +32,10 @@ while IFS= read -r url; do
     uuid=$(echo $response | jq -r '.uuid')
 
     # Save the uuid to a file
-    echo $uuid >> $output/uuids.txt
+    echo $uuid >> output/uuids.txt
 
     sleep 2;
-done < "$output/phishing-urls.txt"
+done < "output/phishing-urls.txt"
 
 # Sleep until the scans are complete
 echo "Sleeping for 60 seconds"
@@ -86,4 +84,4 @@ while IFS= read -r uuid; do
 done < "$output/uuids.txt"
 
 # Convert the bash array to a JSON array and write it to a file
-printf '%s\n' "${responses[@]}" | jq -s '.' > $output/results.json
+printf '%s\n' "${responses[@]}" | jq -s '.' > output/results.json
