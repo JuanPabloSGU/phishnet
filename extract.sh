@@ -1,5 +1,8 @@
-#! bin/bash
-export url="https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-ACTIVE.txt"
+#!bin/bash
+declare -a data_sources=(
+    "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-ACTIVE.txt"
+    "https://temporary.com/legit-sites.txt" # Replace this with a URL of a .txt with legit sites
+)
 
 export output="./output"
 export dom="./output/dom"
@@ -9,11 +12,13 @@ export screenshots="./output/screenshots"
 export API_KEY_URLSCAN=$1
 export API_KEY_GSB=$2
 
-# # Create direcitory if not present
+# Create directory if not present
 mkdir -p output/dom output/screenshots | tr -d '\r'
 
-# Downloads the latest list of phishing urls from Phishing.Database
-curl -L $url > output/phishing-urls.txt | tr -d '\r'
+# Downloads lists of URLs from the data_sources array
+for url in "${data_sources[@]}"; do
+    curl -L "$url" > output/$(basename "$url") | tr -d '\r' #basename extracts the filename portion (including extension)
+done
 
 # Loop through the list of urls and submit them to urlscan.io
 while IFS= read -r url; do
@@ -35,7 +40,7 @@ while IFS= read -r url; do
     echo $uuid >> output/uuids.txt
 
     sleep 2;
-done < "output/phishing-urls.txt"
+done < <(cat output/*.txt) # Reads all .txt files in the output folder
 
 # Sleep until the scans are complete
 echo "Sleeping for 60 seconds"
@@ -78,10 +83,10 @@ while IFS= read -r uuid; do
     fi
 
     responses+=("$urlscan_response")
-    response+=("$gsb_response")
+    response+=("$gsb_response") # Is this supposed to be 'responses'?
 
     sleep 2;
-done < "$output/uuids.txt"
+done < "output/uuids.txt"
 
 # Convert the bash array to a JSON array and write it to a file
 printf '%s\n' "${responses[@]}" | jq -s '.' > output/results.json
