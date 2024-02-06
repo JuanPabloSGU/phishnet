@@ -4,20 +4,20 @@ declare -a data_sources=(
     "https://temporary.com/legit-sites.txt" # Replace this with a URL of a .txt with legit sites
 )
 
-export output="./output"
-export dom="./output/dom"
-export screenshots="./output/screenshots"
+export output="output"
+export dom="output/dom"
+export screenshots="output/screenshots"
 
 # Get API Key from variables when running this script
 export API_KEY_URLSCAN=$1
 export API_KEY_GSB=$2
 
 # Create directory if not present
-mkdir -p output/dom output/screenshots | tr -d '\r'
+mkdir -p $dom $screenshots | tr -d '\r'
 
 # Downloads lists of URLs from the data_sources array
 for url in "${data_sources[@]}"; do
-    curl -L "$url" > output/$(basename "$url") | tr -d '\r' #basename extracts the filename portion (including extension)
+    curl -L "$url" > $output/$(basename "$url") | tr -d '\r' #basename extracts the filename portion (including extension)
 done
 
 # Loop through the list of urls and submit them to urlscan.io
@@ -37,14 +37,14 @@ while IFS= read -r url; do
     uuid=$(echo $response | jq -r '.uuid')
 
     # Save the uuid to a file
-    echo $uuid >> output/uuids.txt
+    echo $uuid >> $output/uuids.txt
 
     sleep 2;
-done < <(cat output/*.txt) # Reads all .txt files in the output folder
+done < <(cat $output/*.txt) # Reads all .txt files in the output folder
 
 # Sleep until the scans are complete
 echo "Sleeping for 60 seconds"
-sleep 60;
+sleep 60; # Is there a reason for waiting 60s? The Result API documentation says to wait at least 10s
 
 # Empty bash array
 declare -a responses
@@ -83,10 +83,16 @@ while IFS= read -r uuid; do
     fi
 
     responses+=("$urlscan_response")
-    response+=("$gsb_response") # Is this supposed to be 'responses'?
+    responses+=("$gsb_response")
+
+    # Retrieve DOM snapshot
+    curl -s "https://urlscan.io/dom/$uuid/" > "$dom/$uuid.html"
+
+    # Retrieve PNG screenshot
+    curl -s "https://urlscan.io/screenshots/$uuid.png" > "$screenshots/$uuid.png"
 
     sleep 2;
-done < "output/uuids.txt"
+done < "$output/uuids.txt"
 
 # Convert the bash array to a JSON array and write it to a file
-printf '%s\n' "${responses[@]}" | jq -s '.' > output/results.json
+printf '%s\n' "${responses[@]}" | jq -s '.' > $output/results.json
