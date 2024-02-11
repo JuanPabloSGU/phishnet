@@ -28,7 +28,6 @@ distribute_urls() {
     local index=0
 
     for machine_id in "${registered_machines[@]}"; do
-        local machine_urls=()
         local remaining_urls=$((total_urls - index))
         local count=$((remaining_urls < urls_per_machine ? remaining_urls : urls_per_machine))
 
