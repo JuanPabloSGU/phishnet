@@ -27,19 +27,19 @@ distribute_urls() {
     local urls_per_machine=$((total_urls / total_machines > 500 ? 500 : total_urls / total_machines))
     local index=0
 
+    # Concatenate all URLs from data_sources into a single file
+    local all_urls_file="all_urls.txt"
+    for source in "${data_sources[@]}"; do
+        curl -s "$source" >> "$all_urls_file"
+    done
+
     for machine_id in "${registered_machines[@]}"; do
         local remaining_urls=$((total_urls - index))
         local count=$((remaining_urls < urls_per_machine ? remaining_urls : urls_per_machine))
 
-        for source in "${data_sources[@]}"; do
-            curl -s "$source" | shuf -n "$count" >> "machine_${machine_id}.txt"
-            count=$((count - $(wc -l < "machine_${machine_id}.txt"))
-            if [ "$count" -le 0 ]; then
-                break
-            fi
-        done
-
-        ((index += $(wc -l < "machine_${machine_id}.txt")))
+        # Distribute URLs from the concatenated file
+        shuf -n "$count" "$all_urls_file" >> "machine_${machine_id}.txt"
+        index=$((index + count))
     done
 }
 
