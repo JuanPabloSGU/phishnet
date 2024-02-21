@@ -19,7 +19,7 @@ class Lexical:
 
             feat_dict['len_url'] = len(url)
 
-            for component in [scheme, netloc, path]:
+            for component in [netloc, path]:
                 name = f'{component=}'.partition('=')[0]
 
                 feat_dict[f'len_{name}'] = len(component)
