@@ -1,21 +1,18 @@
 #!/bin/bash
 
-# TODO: Integrate this code with updating a database
+# Replace the following with the correct values
+DB_HOST="capstone"
+DB_PORT="5432"
+DB_USER="adminuser"
+DB_PASSWORD="pine5%apple"
+DB_NAME="webscrape"
 
-SERVER_IP="123123123" # Replace with server address
-PORT_NO=12345 # Replace with port number of the server
-
-# For local testing purposes (remove after integrating with database)
-export output="output"
-export dom="output/dom"
-export screenshots="output/screenshots"
-mkdir -p $dom $screenshots | tr -d '\r'
+SERVER_IP="172.105.102.230" # Obtained using nslookup meet.databending.ca
+PORT_NO=8888 # Replace with port number of the server
 
 # Get API Key from variables when running this script
 export API_KEY_URLSCAN=$1
 export API_KEY_GSB=$2
-
-declare -a responses
 
 check_server_status() {
     nc -z "$SERVER_IP" $PORT_NO 
@@ -47,8 +44,8 @@ process_urls() {
         # Extract the uuid from the response
         uuid=$(echo $response | jq -r '.uuid')
 
-        # TODO: Replace this code with saving the uuid to database
-        echo $uuid >> $output/uuids.txt
+        # Insert URL and UUID into database
+        PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (url, id) VALUES ('$url', '$uuid');"
 
         sleep 2;
     done
@@ -90,15 +87,15 @@ process_urls() {
             echo $gsb_response
         fi
 
-        # TODO: Replace this code with saving the responses to database
-        responses+=("$urlscan_response")
-        responses+=("$gsb_response")
+        # Insert responses into database
+        PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, metadata) VALUES ('$uuid', '$urlscan_response');"
+        PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, metadata) VALUES ('$uuid', '$gsb_response');"
 
-        # TODO: Replace this code with saving the DOM snapshot to database
-        curl -s "https://urlscan.io/dom/$uuid/" > "$dom/$uuid.html"
+        # Insert HTML snapshot into database
+        curl -s "https://urlscan.io/dom/$uuid/" | PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, html) VALUES ('$uuid', STDIN);"
 
-        # TODO: Replace this code with saving the PNG screenshot to database
-        curl -s "https://urlscan.io/screenshots/$uuid.png" > "$screenshots/$uuid.png"
+        # Insert screenshot into database
+        curl -s "https://urlscan.io/screenshots/$uuid.png" | PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, snapshot) VALUES ('$uuid', STDIN);"
 
         sleep 2;
     done < "$output/uuids.txt"

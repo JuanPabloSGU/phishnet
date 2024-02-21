@@ -4,6 +4,14 @@
 # - Test with multiple clients (on different machines) running at the same time
 # - Add logic for distributing URLs from last indexed position within data_sources (pickup where we left off)
 
+PORT=8888
+
+# Check if the selected port is already in use
+if ss -tln | grep -q ":$PORT "; then
+    echo "Error: Port $PORT is already in use."
+    exit 1
+fi
+
 declare -a data_sources=(
     "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-ACTIVE.txt"
     "https://temporary.com/legit-sites.txt" # Replace this with a URL of a .txt with legit sites
@@ -44,8 +52,7 @@ distribute_urls() {
 }
 
 # Server is always listening for registration and unregistration requests
-while true; do
-    read -r request machine_id
+nc -l -p "$PORT" | while IFS= read -r request machine_id; do
     case $request in
         register)
             registered_machines+=("$machine_id")
@@ -59,3 +66,4 @@ while true; do
             ;;
     esac
 done
+
