@@ -14,9 +14,9 @@ def generate_user_agent(self) -> str:
     return user_agent
 
 class Content:
-    def __init__(self, urls: list, user_agent: str) -> None:
+    def __init__(self, urls: list) -> None:
         self.urls = urls
-        self.user_agent = generate_user_agent()
+        self.user_agent = generate_user_agent(self)
         self.headers = {}
         self.headers['User-Agent'] = self.user_agent
         self.feat_dict = {}
@@ -29,7 +29,8 @@ class Content:
                 return response
             except requests.exceptions.RequestException as e:
                 retry_delay = 2**idx
-                print(f'\033[34mRequestException for {url}. Retrying in {retry_delay} seconds.\033[0m')
+                #print(f'\033[34mRequestException for {url}. Retrying in {retry_delay} seconds.\033[0m')
+                print(e)
                 time.sleep(retry_delay)
             except Exception as e:
                 print(f'\033[31mError making request for {url}: {e}\033[0m')
@@ -48,12 +49,6 @@ class Content:
         Return the number of links in a given HTML soup.
         """
         return len(soup.find_all('a'))
-
-    def get_email_submission_form(self, soup: BeautifulSoup) -> int:
-        """
-        Return the number of email submission forms in a given HTML soup.
-        """
-        return len(soup.find_all('input', type='email'))
 
     def get_mail_usage_form(self, soup: BeautifulSoup) -> int:
         """
@@ -157,9 +152,33 @@ class Content:
             return 1
         return 0
 
-    def extract(self, urls: list):
+    def use_upload(self, soup: BeautifulSoup) -> int:
+        """
+        Return if an upoload is present (1), otherwise 0.
+        """
 
-        for url in urls:
+        upload = soup.find_all('input', type="file")
+        if len(upload) > 0:
+            return 1
+        return 0
+    
+    def use_download(self, soup: BeautifulSoup) -> int:
+        """
+        Return if an upoload is present (1), otherwise 0.
+        """
+
+        all_links = soup.find_all('a')
+
+        for link in all_links:
+            href = link.get('href')
+            if href:
+                if 'download' in href.lower():
+                    return 1
+        return 0
+
+    def extract(self):
+
+        for url in self.urls:
             self.feat_dict['url'] = url
 
             try:
@@ -173,10 +192,9 @@ class Content:
 
             try:
                 soup = BeautifulSoup(response.content, 'html.parser')
-                self.feat_dict['len_html'] = len(soup)
+                self.feat_dict['len_html'] = len(soup.prettify())
                 self.feat_dict['len_text'] = len(soup.get_text())
                 self.feat_dict['len_links'] = self.get_links(soup)
-                self.feat_dict['len_email_submission_forms'] = self.get_email_submission_form(soup)
                 self.feat_dict['len_mail_usage_forms'] = self.get_mail_usage_form(soup)
                 self.feat_dict['meta_script_link_percentage'] = self.meta_script_link_percentage(soup)
                 self.feat_dict['mouseover_changes'] = self.get_mouseover_changes(soup)
@@ -186,8 +204,13 @@ class Content:
                 self.feat_dict['drag_drop_disabled'] = self.get_drag_drop_disabled(soup)
                 self.feat_dict['popup_window_has_text_field'] = self.popup_window_has_text_field(soup)
                 self.feat_dict['use_iframe'] = self.use_iframe(soup)
-                
+                self.feat_dict['use_upload'] = self.use_upload(soup)
+                self.feat_dict['use_download'] = self.use_download(soup)
+
             except Exception as e:
                 print(f'Error parsing HTML: {e}')
                 return
 
+example = Content(['marttowntododia.com'])
+example.extract()
+print(example.feat_dict)
