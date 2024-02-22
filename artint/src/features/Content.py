@@ -30,7 +30,6 @@ class Content:
             except requests.exceptions.RequestException as e:
                 retry_delay = 2**idx
                 print(f'\033[34mRequestException for {url}. Retrying in {retry_delay} seconds.\033[0m')
-                print(e)
                 time.sleep(retry_delay)
             except Exception as e:
                 print(f'\033[31mError making request for {url}: {e}\033[0m')
