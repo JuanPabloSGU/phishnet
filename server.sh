@@ -4,7 +4,7 @@
 # - Test with multiple clients (on different machines) running at the same time
 # - Add logic for distributing URLs from last indexed position within data_sources (pickup where we left off)
 
-PORT=8888
+PORT=8889
 
 # Check if the selected port is already in use
 if ss -tln | grep -q ":$PORT "; then

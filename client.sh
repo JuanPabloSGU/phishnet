@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# Replace the following with the correct values
-DB_HOST="capstone"
-DB_PORT="5432"
-DB_USER="adminuser"
+DB_HOST="216.8.157.110"
+DB_PORT="30434"
+DB_USER="postgres"
 DB_PASSWORD="pine5%apple"
-DB_NAME="webscrape"
+DB_NAME="gqlizer"
+
+S3_HOST="minio.databending.ca"
+S3_BUCKET="capstone"
 
 SERVER_IP="172.105.102.230" # Obtained using nslookup meet.databending.ca
-PORT_NO=8888 # Replace with port number of the server
+PORT_NO=8889 # Replace with port number of the server
 
 # Get API Key from variables when running this script
 export API_KEY_URLSCAN=$1
@@ -91,14 +93,14 @@ process_urls() {
         PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, metadata) VALUES ('$uuid', '$urlscan_response');"
         PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, metadata) VALUES ('$uuid', '$gsb_response');"
 
-        # Insert HTML snapshot into database
-        curl -s "https://urlscan.io/dom/$uuid/" | PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, html) VALUES ('$uuid', STDIN);"
+        # Upload HTML snapshot to S3 bucket via MinIO
+        curl -s "https://urlscan.io/dom/$uuid/" | mc pipe capstone/$uuid.html
 
-        # Insert screenshot into database
-        curl -s "https://urlscan.io/screenshots/$uuid.png" | PGPASSWORD = $DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "INSERT INTO webscrape (uuid, snapshot) VALUES ('$uuid', STDIN);"
+        # Upload PNG screenshot to S3 bucket via MinIO
+        curl -s "https://urlscan.io/screenshots/$uuid.png" | mc pipe capstone/$uuid.png
 
         sleep 2;
-    done < "$output/uuids.txt"
+    done
 }
 
 if !check_server_status; then
@@ -108,6 +110,7 @@ fi
 
 register_machine
 
+echo $hostname # For testing purposes (remove later)
 urls=($(<machine_$(hostname).txt)) # Get the assigned URLs
 
 process_urls "${urls[@]}"
