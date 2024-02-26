@@ -163,7 +163,7 @@ class Content:
     
     def use_download(self, soup: BeautifulSoup) -> int:
         """
-        Return if an upoload is present (1), otherwise 0.
+        Return if an download is present (1), otherwise 0.
         """
 
         all_links = soup.find_all('a')
@@ -174,6 +174,21 @@ class Content:
                 if 'download' in href.lower():
                     return 1
         return 0
+
+    def use_http_link(self, soup: BeautifulSoup) -> int:
+        """
+        Return if a http link is present in the http
+        """
+        
+        all_links = soup.find_all('a')
+        print("CHECK")
+        for link in all_links:
+            href = link.get('href')
+            if href:
+                if 'http:' in href.lower():
+                    return 1
+        return 0
+
 
     def extract(self):
 
@@ -205,11 +220,12 @@ class Content:
                 self.feat_dict['use_iframe'] = self.use_iframe(soup)
                 self.feat_dict['use_upload'] = self.use_upload(soup)
                 self.feat_dict['use_download'] = self.use_download(soup)
+                self.feat_dict['use_http_link'] = self.use_http_link(soup)
 
             except Exception as e:
                 print(f'Error parsing HTML: {e}')
                 return
 
-example = Content(['marttowntododia.com'])
+example = Content(['https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'])
 example.extract()
 print(example.feat_dict)
