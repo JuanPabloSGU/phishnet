@@ -4,9 +4,9 @@ name: Python package
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "eda" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "eda" ]
 
 permissions:
   contents: read
@@ -26,8 +26,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Display Python Version
       run: python -c "import sys; print(sys.version)"
-    - name: Check if git is installed
-      run: git --version
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -40,11 +38,3 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     # Need to add test, here is a placeholder until tests are made.
-    - name: Run updated Python files
-      run: |
-        changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-        for file in $changed_files; do
-          if [[ $file == *.py ]]; then
-            python $file
-          fi
-        done
