@@ -47,3 +47,4 @@ def get_domain_registration_length():
 
 def main():
     print("Feature extraction is in progress...")
+    print("testing workflow change")
