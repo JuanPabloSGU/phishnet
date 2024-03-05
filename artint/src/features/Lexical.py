@@ -10,42 +10,42 @@ class Lexical:
 
     def __init__(self, urls: list) -> None:
         self.urls = urls
+        self.feat_dict = {}
 
     def extract(self) -> list: 
 
-        feat_dict = {}
         for url in self.urls:
             scheme, netloc, path, params, query, fragment = urlparse(url)
 
-            feat_dict['len_url'] = len(url)
+            self.feat_dict['len_url'] = len(url)
 
             for component in [netloc, path]:
                 name = f'{component=}'.partition('=')[0]
 
-                feat_dict[f'len_{name}'] = len(component)
-                feat_dict[f'count_digits_{name}'] = Lexical.count_digits(component)
-                feat_dict[f'count_letters_{name}'] = Lexical.count_letters(component)
-                feat_dict[f'ratio_digits_{name}_url'] = Lexical.component_ratio(feat_dict[f'count_digits_{name}'], url)
-                feat_dict[f'ratio_letters_{name}_url'] = Lexical.component_ratio(feat_dict[f'count_letters_{name}'], url)
+                self.feat_dict[f'len_{name}'] = len(component)
+                self.feat_dict[f'count_digits_{name}'] = Lexical.count_digits(component)
+                self.feat_dict[f'count_letters_{name}'] = Lexical.count_letters(component)
+                self.feat_dict[f'ratio_digits_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_digits_{name}'], url)
+                self.feat_dict[f'ratio_letters_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_letters_{name}'], url)
         
-            feat_dict['count_dots_url'] = Lexical.count_sub(url, '.')
-            feat_dict['count_percent_url'] = Lexical.count_sub(url, '%')
-            feat_dict['count_hash_url'] = Lexical.count_sub(url, '#')
-            feat_dict['count_ats_url'] = Lexical.count_sub(url, '@')
-            feat_dict['count_embed_url'] = Lexical.count_sub(url, '//')
+            self.feat_dict['count_dots_url'] = Lexical.count_sub(url, '.')
+            self.feat_dict['count_percent_url'] = Lexical.count_sub(url, '%')
+            self.feat_dict['count_hash_url'] = Lexical.count_sub(url, '#')
+            self.feat_dict['count_ats_url'] = Lexical.count_sub(url, '@')
+            self.feat_dict['count_embed_url'] = Lexical.count_sub(url, '//')
 
-            feat_dict['use_https'] = Lexical.uses_https(scheme)
-            feat_dict['no_of_directories'] = Lexical.no_of_directories(path)
-            feat_dict['contains_ip_address'] = Lexical.contains_ip_address(netloc)
-            feat_dict['character_continuity_rate_url'] = Lexical.character_continuity_rate(url)
+            self.feat_dict['use_https'] = Lexical.uses_https(scheme)
+            self.feat_dict['no_of_directories'] = Lexical.no_of_directories(path)
+            self.feat_dict['contains_ip_address'] = Lexical.contains_ip_address(netloc)
+            self.feat_dict['character_continuity_rate_url'] = Lexical.character_continuity_rate(url)
 
-            feat_dict['shannon_entropy_url'] = Lexical.shannon_entropy(url)
+            self.feat_dict['shannon_entropy_url'] = Lexical.shannon_entropy(url)
 
 
     @staticmethod
     def component_ratio(one, two):
-        p = len(p) if type(p) is str else one
-        q = len(q) if type(q) is str else two
+        p = len(one) if type(one) is str else one
+        q = len(two) if type(two) is str else two
 
         if not(p and q):
             return 0
@@ -117,10 +117,4 @@ class Lexical:
 urls = ['http://222.186.13.91/flash']
 lex_extractor = Lexical(urls)
 lex_extractor.extract()
-    
-
-
-
-    
-
-
+print(lex_extractor.feat_dict)
