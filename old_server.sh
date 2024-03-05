@@ -36,34 +36,39 @@ distribute_urls() {
     local index=0
 
     # Concatenate all URLs from data_sources into a single file
+    echo "Combining URLs from all data sources into a single file for distribution"
     local all_urls_file="all_urls.txt"
     for source in "${data_sources[@]}"; do
         curl -s "$source" >> "$all_urls_file"
     done
 
     for machine_id in "${registered_machines[@]}"; do
+        echo "Reached for loop for distributing URLs to registered machines"
         local remaining_urls=$((total_urls - index))
         local count=$((remaining_urls < urls_per_machine ? remaining_urls : urls_per_machine))
 
         # Distribute URLs from the concatenated file
         shuf -n "$count" "$all_urls_file" >> "machine_${machine_id}.txt"
+        echo "Created a text file for URLs assigned to machine $machine_id" 
         index=$((index + count))
     done
 }
 
 # Server is always listening for registration and unregistration requests
-nc -l -p "$PORT" | while IFS= read -r request machine_id; do
+while IFS= read -r request machine_id; do
+    echo "Listening for registration and unregistration requests"
     case $request in
         register)
             registered_machines+=("$machine_id")
+            echo "Client registered: $machine_id"
             distribute_urls
             ;;
         unregister)
             # Remove the unregistered machine and resize the array
             unset 'registered_machines[$(echo "${!registered_machines[@]}" | grep -o "\b$machine_id\b" | tail -n1)]'
             registered_machines=("${registered_machines[@]}")
+            echo "Client unregistered: $machine_id"
             distribute_urls
             ;;
     esac
-done
-
+done < <(nc -l -p "$PORT")

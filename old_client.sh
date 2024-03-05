@@ -16,15 +16,19 @@ PORT_NO=8889 # Replace with port number of the server
 export API_KEY_URLSCAN=$1
 export API_KEY_GSB=$2
 
-check_server_status() {
-    nc -z "$SERVER_IP" $PORT_NO 
-}
-
 register_machine() {
-    echo "register $(hostname)" | nc "$SERVER_IP" $PORT_NO 
+    echo "Sending registration request for $(hostname)" 
+    response=$(echo "register $(hostname)" | nc "$SERVER_IP" $PORT_NO 2>&1) # Capture both stdout and stderr
+    if [[ $? -eq 0 ]]; then
+        echo "Registration successful."
+    else
+        echo "Registration failed: $response"
+    fi
+    echo "Client reached the end of the register_machine() function"
 }
 
 unregister_machine() {
+    echo "Sending unregister request for $(hostname)" 
     echo "unregister $(hostname)" | nc "$SERVER_IP" $PORT_NO 
 }
 
@@ -103,14 +107,9 @@ process_urls() {
     done
 }
 
-if !check_server_status; then
-    echo "Server is not running. Exiting."
-    exit 1
-fi
-
 register_machine
 
-echo $hostname # For testing purposes (remove later)
+echo $(hostname) # For testing purposes (remove later)
 urls=($(<machine_$(hostname).txt)) # Get the assigned URLs
 
 process_urls "${urls[@]}"
