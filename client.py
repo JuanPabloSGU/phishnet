@@ -50,7 +50,7 @@ logging.getLogger().addHandler(logstash_handler)
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
     try:
-        minio_client = Minio(S3_HOST, access_key='capstone', secret_key='dwU4hSc2sOc3YdO3qJV7ga3kW2UvKhjs', secure=False)
+        minio_client = Minio(S3_HOST, access_key='ACCESS_KEY', secret_key='SECRET_KEY', secure=False)
         # Upload data to S3 bucket
         minio_client.put_object(S3_BUCKET, filename, data, length=len(data))
     
