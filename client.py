@@ -17,7 +17,7 @@ SERVER_IP = "172.105.102.230"
 PORT_NO = 8889
 
 # Logstash host and port
-LOGSTASH_HOST = "your_logstash_host" # Update logstash credentials
+LOGSTASH_HOST = "" # Update logstash credentials
 LOGSTASH_PORT = 5000 # Update logstash credentials
 
 # S3 configuration
@@ -53,7 +53,6 @@ def upload_to_s3(filename, data):
         minio_client = Minio(S3_HOST, access_key='capstone', secret_key='dwU4hSc2sOc3YdO3qJV7ga3kW2UvKhjs', secure=False)
         # Upload data to S3 bucket
         minio_client.put_object(S3_BUCKET, filename, data, length=len(data))
-        logging.info(f"File {filename} uploaded to S3 successfully")
     
     except ResponseError as err:
         logging.error(err)
