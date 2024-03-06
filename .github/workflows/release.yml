@@ -1,12 +1,10 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-
 name: Python package
 
 on:
   push:
-    branches: [ "main", "eda" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "eda" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
