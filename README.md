@@ -28,6 +28,8 @@ docker run --rm -p8000:8000 -p8001:8001 -p8002:8002 -v %cd%/model-repository:/mo
 (Linux)
 docker run --rm -p8000:8000 -p8001:8001 -p8002:8002 -v ${PWD}/model-repository:/models nvcr.io/nvidia/tritonserver:24.01-py3 tritonserver --model-repository=/models
 
+**Note: use --log-verbose=1 for more information from the server (if you want information when a request is made)
+
 The terminal should show that testModel has the READY status
 
 
