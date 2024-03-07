@@ -1,12 +1,14 @@
-# TODO: Integrate and test with ELK stack
+# TODO: 
+# - Finish integrating with ELK stack
+# - Testing
 
+import logging
 import socket
 import requests
 import json
 import sys
 import time
-import psycopg2
-from psycopg2 import sql
+import logging.handlers
 from minio import Minio
 from minio.error import ResponseError
 
@@ -14,16 +16,16 @@ from minio.error import ResponseError
 SERVER_IP = "172.105.102.230"
 PORT_NO = 8889
 
-# Database credentials
-DB_HOST = ""
-DB_PORT = 12345
-DB_USER = ""
-DB_PASSWORD = ""
-DB_NAME = ""
+# Logstash host and port
+LOGSTASH_HOST = "" # Update logstash credentials
+LOGSTASH_PORT = 5000 # Update logstash credentials
 
 # S3 configuration
 S3_HOST = "minio.databending.ca"
 S3_BUCKET = "capstone"
+
+# Configure logging
+logging.basicConfig(filename='client.log', level=logging.INFO)
 
 # Check if API keys are provided as command-line arguments
 if len(sys.argv) != 3:
@@ -39,32 +41,21 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Connect to the server
 client_socket.connect((SERVER_IP, PORT_NO))
 
-# Function to insert URL and UUID into the database
-def insert_into_db(url, uuid, metadata):
-    try:
-        conn = psycopg2.connect(host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
-        cursor = conn.cursor()
+# Create a Logstash handler
+logstash_handler = logging.handlers.SysLogHandler(address=(LOGSTASH_HOST, LOGSTASH_PORT))
 
-        insert_query = sql.SQL("INSERT INTO webscrape (url, id, metadata) VALUES (%s, %s, %s)")
-        cursor.execute(insert_query, (url, uuid, json.dumps(metadata)))
-
-        conn.commit()
-    except Exception as e:
-        print(f"Error inserting into database: {e}")
-    finally:
-        cursor.close()
-        conn.close()
+# Add Logstash handler to the root logger
+logging.getLogger().addHandler(logstash_handler)
 
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
     try:
-        minio_client = Minio(S3_HOST, access_key='YOUR_ACCESS_KEY', secret_key='YOUR_SECRET_KEY', secure=False)
+        minio_client = Minio(S3_HOST, access_key='ACCESS_KEY', secret_key='SECRET_KEY', secure=False)
         # Upload data to S3 bucket
         minio_client.put_object(S3_BUCKET, filename, data, length=len(data))
-        print(f"File {filename} uploaded to S3 successfully")
     
     except ResponseError as err:
-        print(err)
+        logging.error(err)
 
 # Function to process URLs
 def process_urls(urls):
@@ -78,19 +69,22 @@ def process_urls(urls):
 
             # If the response is 400, skip processing
             if response.status_code == 400:
-                print(f"Skipping {url}, urlscan.io cannot process this URL.")
+                logging.warning(f"Skipping {url}, urlscan.io cannot process this URL.")
                 continue
 
             uuid = response_json["uuid"]
 
-            # Insert URL and UUID into database
-            insert_into_db(url, uuid, response_json)
+            # Log URL and UUID
+            logging.info(f"Processing URL: {url}, UUID: {uuid}")
 
             # URLScan recommends to sleep 2 seconds before checking the result
             time.sleep(2)
 
             # Get the result from urlscan.io
             urlscan_response = requests.get(f"https://urlscan.io/api/v1/result/{uuid}/").json()
+
+            # Log URLScan response
+            logging.info("URLScan response: %s", json.dumps(urlscan_response))
 
             # Prepare request body for Google Safe Browsing API
             request_body = {
@@ -109,15 +103,8 @@ def process_urls(urls):
                 json=request_body
             ).json()
 
-            if not gsb_response:
-                print(f"The URL {url} is safe according to the Google Safe Browsing API.")
-            else:
-                print("The URL is potentially unsafe. Here's the response from the Google Safe Browsing API:")
-                print(json.dumps(gsb_response, indent=4))
-
-            # Insert responses into database
-            insert_into_db(uuid, "urlscan_response", urlscan_response)
-            insert_into_db(uuid, "gsb_response", gsb_response)
+            # Log Google Safe Browsing response
+            logging.info("Google Safe Browsing response: %s", json.dumps(gsb_response))
 
             # Upload HTML snapshot to S3 bucket via MinIO
             html_snapshot = requests.get(f"https://urlscan.io/dom/{uuid}/").content
@@ -128,7 +115,7 @@ def process_urls(urls):
             upload_to_s3(f"{uuid}.png", png_screenshot)
 
         except Exception as e:
-            print(f"Error processing URL {url}: {e}")
+            logging.error(f"Error processing URL {url}: {e}")
 
 # Receive URLs from the server
 while True:
@@ -137,11 +124,6 @@ while True:
         break
     urls = url_data.splitlines()
 
-    print("Received URLs from server:")
-    for url in urls:
-        print(url)
-
-    # Process URLs
     process_urls(urls)
 
     # Send acknowledgment back to the server
