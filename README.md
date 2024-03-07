@@ -29,3 +29,7 @@ docker run --rm -p8000:8000 -p8001:8001 -p8002:8002 -v %cd%/model-repository:/mo
 docker run --rm -p8000:8000 -p8001:8001 -p8002:8002 -v ${PWD}/model-repository:/models nvcr.io/nvidia/tritonserver:24.01-py3 tritonserver --model-repository=/models
 
 The terminal should show that testModel has the READY status
+
+
+##To check out the cfg file of the server (change testModel to whatever the actual model name is)
+curl localhost:8000/v2/models/testModel/config
