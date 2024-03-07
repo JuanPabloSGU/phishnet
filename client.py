@@ -2,13 +2,12 @@
 # - Finish integrating with ELK stack
 # - Testing
 
-import logging
 import socket
 import requests
 import json
 import sys
 import time
-import logging.handlers
+from elasticsearch import Elasticsearch
 from minio import Minio
 from minio.error import ResponseError
 
@@ -16,16 +15,13 @@ from minio.error import ResponseError
 SERVER_IP = "172.105.102.230"
 PORT_NO = 8889
 
-# Logstash host and port
-LOGSTASH_HOST = "" # Update logstash credentials
-LOGSTASH_PORT = 5000 # Update logstash credentials
+# Elasticsearch host and port (update with correct credentials)
+ELASTICSEARCH_HOST = "http://hostname:9200"
+ELASTICSEARCH_INDEX = ""
 
 # S3 configuration
 S3_HOST = "minio.databending.ca"
 S3_BUCKET = "capstone"
-
-# Configure logging
-logging.basicConfig(filename='client.log', level=logging.INFO)
 
 # Check if API keys are provided as command-line arguments
 if len(sys.argv) != 3:
@@ -41,21 +37,17 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Connect to the server
 client_socket.connect((SERVER_IP, PORT_NO))
 
-# Create a Logstash handler
-logstash_handler = logging.handlers.SysLogHandler(address=(LOGSTASH_HOST, LOGSTASH_PORT))
-
-# Add Logstash handler to the root logger
-logging.getLogger().addHandler(logstash_handler)
+# Create Elasticsearch client
+es_client = Elasticsearch(ELASTICSEARCH_HOST)
 
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
     try:
         minio_client = Minio(S3_HOST, access_key='ACCESS_KEY', secret_key='SECRET_KEY', secure=False)
-        # Upload data to S3 bucket
         minio_client.put_object(S3_BUCKET, filename, data, length=len(data))
     
     except ResponseError as err:
-        logging.error(err)
+        print(err)
 
 # Function to process URLs
 def process_urls(urls):
@@ -69,13 +61,13 @@ def process_urls(urls):
 
             # If the response is 400, skip processing
             if response.status_code == 400:
-                logging.warning(f"Skipping {url}, urlscan.io cannot process this URL.")
+                print(f"Skipping {url}, urlscan.io cannot process this URL.")
                 continue
 
             uuid = response_json["uuid"]
 
-            # Log URL and UUID
-            logging.info(f"Processing URL: {url}, UUID: {uuid}")
+            # TODO: Remove later - print statement for testing purposes 
+            print(f"Processing URL: {url}, UUID: {uuid}")
 
             # URLScan recommends to sleep 2 seconds before checking the result
             time.sleep(2)
@@ -83,8 +75,8 @@ def process_urls(urls):
             # Get the result from urlscan.io
             urlscan_response = requests.get(f"https://urlscan.io/api/v1/result/{uuid}/").json()
 
-            # Log URLScan response
-            logging.info("URLScan response: %s", json.dumps(urlscan_response))
+            # TODO: Remove later - print statement for testing purposes 
+            print("URLScan response: %s", json.dumps(urlscan_response))
 
             # Prepare request body for Google Safe Browsing API
             request_body = {
@@ -103,8 +95,17 @@ def process_urls(urls):
                 json=request_body
             ).json()
 
-            # Log Google Safe Browsing response
-            logging.info("Google Safe Browsing response: %s", json.dumps(gsb_response))
+            # TODO: Remove later - print statement for testing purposes 
+            print("Google Safe Browsing response: %s", json.dumps(gsb_response))
+
+            # Index data to Elasticsearch
+            data = {
+                "url": url,
+                "uuid": uuid,
+                "urlscan_response": urlscan_response,
+                "gsb_response": gsb_response
+            }
+            es_client.index(index=ELASTICSEARCH_INDEX, body=data)
 
             # Upload HTML snapshot to S3 bucket via MinIO
             html_snapshot = requests.get(f"https://urlscan.io/dom/{uuid}/").content
@@ -115,7 +116,7 @@ def process_urls(urls):
             upload_to_s3(f"{uuid}.png", png_screenshot)
 
         except Exception as e:
-            logging.error(f"Error processing URL {url}: {e}")
+            print(f"Error processing URL {url}: {e}")
 
 # Receive URLs from the server
 while True:
