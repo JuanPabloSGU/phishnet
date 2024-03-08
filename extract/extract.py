@@ -30,7 +30,7 @@ for url in urls:
     df = pd.DataFrame.from_dict(data=lexical.feat_dict, orient='index')
     df = df.transpose()
 
-    with open('extract/lexical.csv', 'a') as f:
+    with open('extract/lexical.csv', 'a', newline='') as f:
         if os.stat('extract/lexical.csv').st_size == 0:
             f.write(df.to_csv(header=True, index=False))
         f.write(df.to_csv(header=False, index=False))
