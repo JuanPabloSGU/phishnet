@@ -2,4 +2,5 @@
 
 artint/data/
 /extract/.env
+/extract/blocklist.txt
 .venv
