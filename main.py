@@ -1,28 +1,32 @@
+import os
 import requests
 import json
 import sys
 import time
+from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from minio import Minio
 from minio.error import ResponseError
 
+load_dotenv()
+
 # Elasticsearch host and port (update with correct credentials)
-ELASTICSEARCH_HOST = "http://hostname:9200"
-ELASTICSEARCH_INDEX = ""
+ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+ELASTICSEARCH_INDEX = os.getenv('ELASTICSEARCH_INDEX')
 
 # S3 configuration
-S3_HOST = "minio.databending.ca"
-S3_BUCKET = "capstone"
+S3_HOST = os.getenv('S3_HOST')
+S3_BUCKET = os.getenv('S3_BUCKET')
 
 # Check if API keys are provided as command-line arguments
 if len(sys.argv) != 5:
     print("Usage: python main.py <API_KEY_URLSCAN> <API_KEY_GSB> <ACCESS_KEY> <SECRET_KEY>")
     sys.exit(1)
 
-API_KEY_URLSCAN = sys.argv[1]
-API_KEY_GSB = sys.argv[2]
-ACCESS_KEY = sys.argv[3]
-SECRET_KEY = sys.argv[4]
+API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
+API_KEY_GSB = os.getenv('GOOGLE_SAFE_BROWSING_API_KEY')
+ACCESS_KEY = os.getenv('MINIO_ACCESS')
+SECRET_KEY = os.getenv('MINIO_SECRET')
 
 data_sources = [
     "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-ACTIVE.txt"
