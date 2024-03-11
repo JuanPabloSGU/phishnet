@@ -1,3 +1,7 @@
 .DS_Store
+artint/data/
+/extract/.env
+/extract/blocklist.txt
+.venv
 requirements/*.env
 artint/data/

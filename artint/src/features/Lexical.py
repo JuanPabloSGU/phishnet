@@ -17,6 +17,7 @@ class Lexical:
         for url in self.urls:
             scheme, netloc, path, params, query, fragment = urlparse(url)
 
+            self.feat_dict[f'url'] = url
             self.feat_dict['len_url'] = len(url)
 
             for component in [netloc, path]:
@@ -114,7 +115,3 @@ class Lexical:
         total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
         return 0 if len(url) == 0 else total_consecutive_length / len(url)
     
-urls = ['http://222.186.13.91/flash']
-lex_extractor = Lexical(urls)
-lex_extractor.extract()
-print(lex_extractor.feat_dict)
