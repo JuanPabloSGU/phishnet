@@ -1,14 +1,12 @@
 import numpy as np
+import torch.nn as nn
 
-class LogisticRegression:
-
+class LogisticRegressionBase:
     def __init__(self, X_train, Y_train, X_test, Y_test, num_epochs=2000, learning_rate=0.005) -> None:
-
         self.X_train = X_train
         self.Y_train = Y_train
         self.X_test = X_test
         self.Y_test = Y_test
-
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
 
@@ -73,7 +71,25 @@ class LogisticRegression:
             'Y_pred_test': Y_pred_test
         }
     
-lr_inst = LogisticRegression()
-model_out = lr_inst.model()
+lr_base = LogisticRegressionBase()
+model_out = lr_base.model()
 
 print(model_out)
+
+
+class LogisticRegressionPytorch(nn.Module):
+    def __init__(self, input_size):
+        super(LogisticRegressionPytorch, self).__init__()
+        self.linear = nn.Linear(input_size, 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        out = self.linear(x)
+        out = self.sigmoid(out)
+        return out
+
+input_size = ... # fill with training data shape
+model = LogisticRegressionPytorch(input_size)
+
+class LogisticRegressionScikitLearn:
+    pass
