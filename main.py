@@ -12,17 +12,12 @@ load_dotenv()
 
 # Elasticsearch host and port (update with correct credentials)
 ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+ELASTICSEARCH_PORT = os.getenv('ELASTICSEARCH_PORT')
 ELASTICSEARCH_INDEX = os.getenv('ELASTICSEARCH_INDEX')
 
 # S3 configuration
 S3_HOST = os.getenv('S3_HOST')
 S3_BUCKET = os.getenv('S3_BUCKET')
-
-# Check if API keys are provided as command-line arguments
-if len(sys.argv) != 5:
-    print("Usage: python main.py <API_KEY_URLSCAN> <API_KEY_GSB> <ACCESS_KEY> <SECRET_KEY>")
-    sys.exit(1)
-
 API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
 API_KEY_GSB = os.getenv('GOOGLE_SAFE_BROWSING_API_KEY')
 ACCESS_KEY = os.getenv('MINIO_ACCESS')
@@ -33,7 +28,7 @@ data_sources = [
 ]
 
 # Create Elasticsearch client
-es_client = Elasticsearch(ELASTICSEARCH_HOST)
+es_client = Elasticsearch(ELASTICSEARCH_HOST, basic_auth=(ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD), request_timeout=60)
 
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
@@ -69,9 +64,6 @@ def process_url(url):
         # Get the result from urlscan.io
         urlscan_response = requests.get(f"https://urlscan.io/api/v1/result/{uuid}/").json()
 
-        # TODO: Remove later - print statement for testing purposes 
-        print("URLScan response: %s", json.dumps(urlscan_response))
-
         # Prepare request body for Google Safe Browsing API
         request_body = {
             "client": {"clientId": "Capstone", "clientVersion": "1.5.2"},
@@ -89,9 +81,6 @@ def process_url(url):
             json=request_body
         ).json()
 
-        # TODO: Remove later - print statement for testing purposes 
-        print("Google Safe Browsing response: %s", json.dumps(gsb_response))
-
         # Index data to Elasticsearch
         data = {
             "url": url,
@@ -99,6 +88,7 @@ def process_url(url):
             "urlscan_response": urlscan_response,
             "gsb_response": gsb_response
         }
+
         es_client.index(index=ELASTICSEARCH_INDEX, body=data)
 
         # Upload HTML snapshot to S3 bucket via MinIO
