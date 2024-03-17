@@ -1,28 +1,28 @@
+import csv
 import os
 import requests
 import json
 import sys
 import time
+import threading
 from dotenv import load_dotenv
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 from minio import Minio
-from minio.error import ResponseError
+from extract import extract
 
-load_dotenv()
+load_dotenv('keys.env')
 
 # Elasticsearch host and port (update with correct credentials)
 ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
 ELASTICSEARCH_INDEX = os.getenv('ELASTICSEARCH_INDEX')
+ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
+ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
 
 # S3 configuration
 S3_HOST = os.getenv('S3_HOST')
 S3_BUCKET = os.getenv('S3_BUCKET')
 
-# Check if API keys are provided as command-line arguments
-if len(sys.argv) != 5:
-    print("Usage: python main.py <API_KEY_URLSCAN> <API_KEY_GSB> <ACCESS_KEY> <SECRET_KEY>")
-    sys.exit(1)
-
+# API Keys
 API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
 API_KEY_GSB = os.getenv('GOOGLE_SAFE_BROWSING_API_KEY')
 ACCESS_KEY = os.getenv('MINIO_ACCESS')
@@ -33,7 +33,18 @@ data_sources = [
 ]
 
 # Create Elasticsearch client
-es_client = Elasticsearch(ELASTICSEARCH_HOST)
+es_client = Elasticsearch(
+    ELASTICSEARCH_HOST, 
+    basic_auth=(ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD), 
+    request_timeout=60
+)
+
+try:
+    info = es_client.info()
+    print('Connected to Elasticsearch:', info)
+except Exception as e:
+    print('Could not connect to Elasticsearch:', e)
+    sys.exit(1)
 
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
@@ -41,8 +52,8 @@ def upload_to_s3(filename, data):
         minio_client = Minio(S3_HOST, access_key=ACCESS_KEY, secret_key=SECRET_KEY, secure=False)
         minio_client.put_object(S3_BUCKET, filename, data, length=len(data))
     
-    except ResponseError as err:
-        print(err)
+    except Exception as e:
+        print(e)
 
 # Function to process URLs
 def process_url(url):
@@ -69,9 +80,6 @@ def process_url(url):
         # Get the result from urlscan.io
         urlscan_response = requests.get(f"https://urlscan.io/api/v1/result/{uuid}/").json()
 
-        # TODO: Remove later - print statement for testing purposes 
-        print("URLScan response: %s", json.dumps(urlscan_response))
-
         # Prepare request body for Google Safe Browsing API
         request_body = {
             "client": {"clientId": "Capstone", "clientVersion": "1.5.2"},
@@ -89,9 +97,6 @@ def process_url(url):
             json=request_body
         ).json()
 
-        # TODO: Remove later - print statement for testing purposes 
-        print("Google Safe Browsing response: %s", json.dumps(gsb_response))
-
         # Index data to Elasticsearch
         data = {
             "url": url,
@@ -99,6 +104,7 @@ def process_url(url):
             "urlscan_response": urlscan_response,
             "gsb_response": gsb_response
         }
+
         es_client.index(index=ELASTICSEARCH_INDEX, body=data)
 
         # Upload HTML snapshot to S3 bucket via MinIO
@@ -116,5 +122,23 @@ def process_url(url):
 for source in data_sources:
     response = requests.get(source)
     urls = response.text.splitlines()
+
+    # Start a new thread to run extract.main() with urls as argument
+    extraction_thread = threading.Thread(target=extract.main, args=(urls,))
+    extraction_thread.start()
+
+    # Process URLs while extract.main() runs concurrently
     for url in urls:
         process_url(url)
+
+    # Wait for extract.main() to finish
+    extraction_thread.join()
+
+    # Load CSV files into Elasticsearch
+    with open('extract/lexical.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        helpers.bulk(es_client, reader, index=ELASTICSEARCH_INDEX)
+
+    with open('extract/content.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        helpers.bulk(es_client, reader, index=ELASTICSEARCH_INDEX)
