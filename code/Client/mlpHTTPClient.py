@@ -5,7 +5,7 @@ import numpy as np
 # Define the Triton server information
 triton_server_url = "http://localhost:8000"  # Update with your Triton server URL
 model_name = "MLP"  # Update with your model name
-model_version = "1"  # Update with your model version (or use "1" for the default version)
+#model_version = "1"  # Update with your model version (or use "1" for the default version)
 
 # Prepare input data for inference (example for a model that expects a single input tensor)
 

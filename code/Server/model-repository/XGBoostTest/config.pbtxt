@@ -1,0 +1,47 @@
+name: "XGBoostTest"                              # Name of the model directory (fil in our case)
+backend: "fil"                           # Triton FIL backend for deploying forest models
+max_batch_size: 8192
+input [
+ {
+    name: "input__0"
+    data_type: TYPE_FP32
+    dims: [ 9 ]                          # Input feature dimensions, in our sample case it's 9
+  }
+]
+output [
+ {
+    name: "output__0"
+    data_type: TYPE_FP32
+    dims: [ 1 ]                          # Output 2 for binary classification model
+  }
+]
+parameters [
+  {
+    key: "model_type"
+    value: { string_value: "xgboost" }
+  },
+  {
+    key: "predict_proba"
+    value: { string_value: "false" }
+  },
+  {
+    key: "output_class"
+    value: { string_value: "true" }
+  },
+  {
+    key: "threshold"
+    value: { string_value: "0.5" }
+  },
+  {
+    key: "algo"
+    value: { string_value: "ALGO_AUTO" }
+  },
+  {
+    key: "storage_type"
+    value: { string_value: "AUTO" }
+  },
+  {
+    key: "blocks_per_sm"
+    value: { string_value: "0" }
+  }
+]
