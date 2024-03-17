@@ -61,6 +61,12 @@ class Domain:
                 self.feat_dict['domain_length'] = Domain.get_domain_length(w)
                 self.feat_dict['name_servers'] = Domain.get_name_servers(w)
                 self.feat_dict['TLD'] = Domain.get_TLD(w)
+                self.feat_dict['registrar'] = Domain.get_registrar(w)
+                self.feat_dict['whois_server'] = Domain.get_whois_server(w)
+                self.feat_dict['creation_date'] = Domain.get_creation_date(w)
+                self.feat_dict['expiration_date'] = Domain.get_expiration_date(w)
+                self.feat_dict['updated_date'] = Domain.get_updated_date(w)
+                self.feat_dict['dnssec'] = Domain.get_dnssec(w)
 
             except Exception as e:
                 print(f'Error making request: {e}')
