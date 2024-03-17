@@ -1,36 +1,28 @@
-import requests
 import os
-import sys
 import pandas as pd
-from dotenv import load_dotenv
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-def extract(url: str):
-    response = requests.get(url, stream=True)
-    if response.status_code != 200:
-        raise Exception(f'Error: {response.status_code}')
-
-    return response
-
-load_dotenv()
-
-r = extract(os.getenv('BLOCKLIST'))
-
-with open('blocklist.txt', 'wb') as f:
-    f.write(r.content)
-
-urls = open('extract/blocklist.txt').read().splitlines()
-
 from artint.src.features.Lexical import Lexical
+from artint.src.features.Content import Content
 
-for url in urls:
-    lexical = Lexical([url])
-    lexical.extract()
-    df = pd.DataFrame.from_dict(data=lexical.feat_dict, orient='index')
-    df = df.transpose()
+def main(urls: list):
+    for url in urls:
+        # Extract lexical features
+        lexical = Lexical([url])
+        lexical.extract()
+        df_lexical = pd.DataFrame.from_dict(data=lexical.feat_dict, orient='index')
+        df_lexical = df_lexical.transpose()
 
-    with open('extract/lexical.csv', 'a', newline='') as f:
-        if os.stat('extract/lexical.csv').st_size == 0:
-            f.write(df.to_csv(header=True, index=False))
-        f.write(df.to_csv(header=False, index=False))
+        with open('extract/lexical.csv', 'a', newline='') as f:
+            if os.stat('extract/lexical.csv').st_size == 0:
+                f.write(df_lexical.to_csv(header=True, index=False))
+            f.write(df_lexical.to_csv(header=False, index=False))
+
+        # Extract content features
+        content = Content([url])
+        content.extract()
+        df_content = pd.DataFrame.from_dict(data=content.feat_dict, orient='index')
+        df_content = df_content.transpose()
+
+        with open('extract/content.csv', 'a', newline='') as f: # TODO: Add column headers to content.csv
+            if os.stat('extract/content.csv').st_size == 0:
+                f.write(df_content.to_csv(header=True, index=False))
+            f.write(df_content.to_csv(header=False, index=False))
