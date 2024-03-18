@@ -1,28 +1,28 @@
 import os
 import pandas as pd
-from artint.src.features.Lexical import Lexical
 from artint.src.features.Content import Content
+from artint.src.features.Domain import Domain
+from artint.src.features.Lexical import Lexical
+
+def extract_features(feature_class, output_file, url):
+    feature_extractor = feature_class([url])
+    feature_extractor.extract()
+    df = pd.DataFrame.from_dict(data=feature_extractor.feat_dict, orient='index')
+    df = df.transpose()
+
+    with open(output_file, 'a', newline='') as f:
+        if os.stat(output_file).st_size == 0:
+            f.write(df.to_csv(header=True, index=False))
+        f.write(df.to_csv(header=False, index=False))
 
 def main(urls: list):
     for url in urls:
         # Extract lexical features
-        lexical = Lexical([url])
-        lexical.extract()
-        df_lexical = pd.DataFrame.from_dict(data=lexical.feat_dict, orient='index')
-        df_lexical = df_lexical.transpose()
-
-        with open('extract/lexical.csv', 'a', newline='') as f:
-            if os.stat('extract/lexical.csv').st_size == 0:
-                f.write(df_lexical.to_csv(header=True, index=False))
-            f.write(df_lexical.to_csv(header=False, index=False))
+        extract_features(Lexical, 'extract/lexical.csv', url)
 
         # Extract content features
-        content = Content([url])
-        content.extract()
-        df_content = pd.DataFrame.from_dict(data=content.feat_dict, orient='index')
-        df_content = df_content.transpose()
+        # TODO: Figure out why column headers are missing in content.csv
+        extract_features(Content, 'extract/content.csv', url) 
 
-        with open('extract/content.csv', 'a', newline='') as f: # TODO: Add column headers to content.csv
-            if os.stat('extract/content.csv').st_size == 0:
-                f.write(df_content.to_csv(header=True, index=False))
-            f.write(df_content.to_csv(header=False, index=False))
+        # Extract domain features
+        extract_features(Domain, 'extract/domain.csv', url)

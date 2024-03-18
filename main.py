@@ -46,6 +46,12 @@ except Exception as e:
     print('Could not connect to Elasticsearch:', e)
     sys.exit(1)
 
+# Function to load CSV file to Elasticsearch
+def load_csv_to_es(file_name):
+    with open(file_name, 'r') as f:
+        reader = csv.DictReader(f)
+        helpers.bulk(es_client, reader, index=ELASTICSEARCH_INDEX)
+
 # Function to upload file to S3 bucket
 def upload_to_s3(filename, data):
     try:
@@ -135,10 +141,6 @@ for source in data_sources:
     extraction_thread.join()
 
     # Load CSV files into Elasticsearch
-    with open('extract/lexical.csv', 'r') as f:
-        reader = csv.DictReader(f)
-        helpers.bulk(es_client, reader, index=ELASTICSEARCH_INDEX)
-
-    with open('extract/content.csv', 'r') as f:
-        reader = csv.DictReader(f)
-        helpers.bulk(es_client, reader, index=ELASTICSEARCH_INDEX)
+    load_csv_to_es('extract/lexical.csv')
+    load_csv_to_es('extract/content.csv')
+    load_csv_to_es('extract/domain.csv')
