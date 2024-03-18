@@ -72,6 +72,6 @@ class Domain:
                 print(f'Error making request: {e}')
                 return
 
-example = Domain(['https://www.google.com'])
-example.extract()
-print(example.feat_dict)
+# example = Domain(['https://www.google.com'])
+# example.extract()
+# print(example.feat_dict)
