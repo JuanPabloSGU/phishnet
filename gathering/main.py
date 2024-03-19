@@ -52,10 +52,10 @@ def main():
         sys.exit(1)
 
     logging.info('Processing malicious URLs for f{OPENFISH_URL}') 
-    malicious_urls(es_client, OPENFISH_URL, 'openfish', False)
+    malicious_urls(es_client, OPENFISH_URL, 'raw', False)
 
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
-    malicious_urls(es_client, PHISHING_DATABASE_URL, 'phishing_database', True)
+    malicious_urls(es_client, PHISHING_DATABASE_URL, 'raw', True)
     
     logging.info('Completed all tasks.') 
 
