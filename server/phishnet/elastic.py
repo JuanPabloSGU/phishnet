@@ -1,27 +1,22 @@
-import click
 from elasticsearch import Elasticsearch
 from flask import current_app, g
 
-def connect_elasticsearch():
-    if 'db' not in g:
-        g.db = Elasticsearch(
-            current_app.config['ELASTICSEARCH_HOST'],
-            basic_auth=(current_app.config['ELASTICSEARCH_USER'], current_app.config['ELASTICSEARCH_PASSWORD']),
-            request_timeout=60
+
+def get_elastic():
+    if 'elastic' not in g:
+        g.elastic = Elasticsearch(
+            current_app.config.get("ELASTICSEARCH_HOST"),
+            basic_auth=(
+                current_app.config.get('ELASTICSEARCH_USER'),
+                current_app.config.get('ELASTICSEARCH_PASSWORD')
+            ),
+            timeout=60
         )
+    return g.elastic
 
-    return g.db
 
-def close_elasticsearch(e=None):
-    db = g.pop('db', None)
+def close_elastic(e=None):
+    elastic = g.pop('elastic', None)
 
-    if db is not None:
-        db.close()
-    
-def init_elasticsearch_command():
-    connect_elasticsearch()
-    click.echo('Connected to Elasticsearch')
-    
-def init_app(app):
-    app.teardown_appcontext(close_elasticsearch)
-    app.cli.add_command(init_elasticsearch_command)
+    if elastic is not None:
+        elastic.close()
