@@ -1,5 +1,6 @@
 import numpy as np
 import torch.nn as nn
+from sklearn.linear_model import LogisticRegression
 
 class LogisticRegressionBase:
     def __init__(self, X_train, Y_train, X_test, Y_test, num_epochs=2000, learning_rate=0.005) -> None:
@@ -70,12 +71,6 @@ class LogisticRegressionBase:
             'Y_pred_train': Y_pred_train,
             'Y_pred_test': Y_pred_test
         }
-    
-lr_base = LogisticRegressionBase()
-model_out = lr_base.model()
-
-print(model_out)
-
 
 class LogisticRegressionPytorch(nn.Module):
     def __init__(self, input_size):
@@ -87,9 +82,3 @@ class LogisticRegressionPytorch(nn.Module):
         out = self.linear(x)
         out = self.sigmoid(out)
         return out
-
-input_size = ... # fill with training data shape
-model = LogisticRegressionPytorch(input_size)
-
-class LogisticRegressionScikitLearn:
-    pass
