@@ -8,7 +8,7 @@ def get_elastic():
             current_app.config.get("ELASTICSEARCH_HOST"),
             basic_auth=(
                 current_app.config.get('ELASTICSEARCH_USER'),
-                current_app.config.get('ELASTICSEARCH_PASSWORD')
+                current_app.config.get('ELASTICSEARCH_PASS')
             ),
             timeout=60
         )

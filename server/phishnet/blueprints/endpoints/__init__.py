@@ -47,7 +47,23 @@ class ElasticsearchResource(Resource):
         }
     })
     def get(self):
-        es = elastic.get_elastic().info()
-        return {'message': 'Hello, ElasticSearch!', 'info': es}
+        es = elastic.get_elastic().info(pretty=True)
+        return {'message': 'Hello, ElasticSearch!', 'info': es.body}
 
 api.add_resource(ElasticsearchResource, '/elastic')
+
+class TestElasticsearchResource(Resource):
+    def get(self):
+        es = elastic.get_elastic()
+        idx = 'test-data'
+        data = es.search(index=idx, body={'query': {'match_all': {}}})
+        print(data)
+        return {'message': 'Test Elasticsearch!', 'data': data['hits']['hits']}
+
+    def post(self):
+        es = elastic.get_elastic()
+        idx = 'test-data'
+        es.create(index=idx, id=1, body={'test': 'data'})
+        return {'message': 'Test Elasticsearch!'}
+
+api.add_resource(TestElasticsearchResource, '/test_elastic')
