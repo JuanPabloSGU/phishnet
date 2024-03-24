@@ -21,11 +21,11 @@ def malicious_urls(es_client, url, index, stream):
         return
     
     logging.info(f'Writing data to {index}.csv')
-    with open(f'{index}.csv', 'wb') as f:
+    with open(f'{index}.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['url', 'type'])
-        row = data.split('\n') + ['1']
-        writer.writerows(row)
+        for row in data.iter_lines():
+            writer.writerow([row.decode(), '1'])
 
     logging.info(f'Loading data into Elasticsearch')
     load_csv_to_es(f'{index}.csv', es_client, index)
