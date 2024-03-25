@@ -49,12 +49,21 @@ def main():
 
     raw_data = get_es_index(es_client, 'raw')
     data = []
+    processed_urls = set()  # Set to store processed URLs (prevent duplicates)
+
     logging.info('Extracting features from raw data')
     for doc in raw_data:
         url = doc['_source']['url']
         type = doc['_source']['type']
-        features = extract_features(url)
-        data.append({'url': url, 'type': type, **features})
+
+        # If URL is NOT in 'featext', extract features and append to data
+        if url not in processed_urls:
+            query = {"query": {"term": {"url.keyword": url}}}
+            result = es_client.search(index="featext", body=query)
+            if result["hits"]["total"]["value"] == 0:
+                features = extract_features(url)
+                data.append({'url': url, 'type': type, **features})
+                processed_urls.add(url)
 
     logging.info('Saving features to features.csv')
     df = pd.DataFrame(data)
