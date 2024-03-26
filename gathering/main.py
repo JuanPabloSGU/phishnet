@@ -27,14 +27,14 @@ def malicious_urls(es_client, url, index, stream):
             # Check if the URL is already in elasticsearch
             res = es_client.search(index=index, body={
                 'query': {
-                    'match': {
-                        'url': url
+                    'term': {
+                        'url.keyword': url
                     }
                 }
             })
 
             # If the URL is already in Elasticsearch, skip it
-            if res['hits']['total']['value'] > 0:
+            if res['hits']['total']['value'] == 0:
                 logging.info(f'{url} already exists in {index}')
                 continue
 
