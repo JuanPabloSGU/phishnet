@@ -77,13 +77,13 @@ class Content:
 
         total_links = meta_links + script_links + link_links
         if total_links == 0:
-            return (0, 0, 0)
+            return "0, 0, 0"
         
         meta_percentage = meta_links / total_links
         script_percentage = script_links / total_links
         link_percentage = link_links / total_links
 
-        return (meta_percentage, script_percentage, link_percentage)
+        return str(meta_percentage) + ", " + str(script_percentage) + ", " + str(link_percentage)
 
     def get_mouseover_changes(self, soup: BeautifulSoup) -> int:
         """
@@ -181,7 +181,6 @@ class Content:
         """
         
         all_links = soup.find_all('a')
-        print("CHECK")
         for link in all_links:
             href = link.get('href')
             if href:
@@ -229,3 +228,9 @@ class Content:
 # example = Content(['https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'])
 # example.extract()
 # print(example.feat_dict)
+
+# for keys in example.feat_dict:
+#     if type(example.feat_dict[keys]) != int and type(example.feat_dict[keys]) != float and type(example.feat_dict[keys]) != str:
+#         print(keys + " " + str(type(example.feat_dict[keys])))
+#         print(example.feat_dict[keys])
+#         print()

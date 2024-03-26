@@ -9,7 +9,7 @@ class Domain:
 
     @staticmethod
     def get_domain(w: whois.WhoisEntry) -> Union[list, str]:
-        return w.domain_name
+        return ', '.join([str(item) for item in w.domain_name])
 
     @staticmethod
     def get_domain_length(w: whois.WhoisEntry) -> Union[list, str]:
@@ -17,7 +17,7 @@ class Domain:
     
     @staticmethod
     def get_name_servers(w: whois.WhoisEntry) -> Union[list, str]:
-        return w.name_servers
+        return ', '.join([str(item) for item in w.name_servers])
 
     @staticmethod
     def get_TLD(w) -> str:
@@ -37,15 +37,15 @@ class Domain:
 
     @staticmethod
     def get_creation_date(w: whois.WhoisEntry) -> Union[list, str]:
-        return w.creation_date
+        return '| '.join([item.strftime("%m/%d/%Y, %H:%M:%S") for item in w.creation_date])
     
     @staticmethod
     def get_expiration_date(w: whois.WhoisEntry) -> Union[list, str]:
-        return w.expiration_date
+        return '| '.join([item.strftime("%m/%d/%Y, %H:%M:%S") for item in w.expiration_date])
 
     @staticmethod
     def get_updated_date(w: whois.WhoisEntry) -> Union[list, str]:
-        return w.updated_date
+        return w.updated_date.strftime("%m/%d/%Y, %H:%M:%S")
 
     @staticmethod
     def get_dnssec(w: whois.WhoisEntry) -> Union[list, str]:
@@ -75,3 +75,9 @@ class Domain:
 # example = Domain(['https://www.google.com'])
 # example.extract()
 # print(example.feat_dict)
+
+# for keys in example.feat_dict:
+#     if type(example.feat_dict[keys]) != int and type(example.feat_dict[keys]) != float and type(example.feat_dict[keys]) != str:
+#         print(keys + " " + str(type(example.feat_dict[keys])))
+#         print(example.feat_dict[keys])
+#         print()
