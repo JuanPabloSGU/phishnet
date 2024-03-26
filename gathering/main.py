@@ -14,7 +14,7 @@ def malicious_urls(es_client, url, index, stream):
         return
 
     if not es_client.indices.exists(index=index):
-        logging.info(f'Index {index} exists. Creating index {index}')
+        logging.info(f'Index {index} does not exist. Creating index {index}')
         es_client.indices.create(index=index)
     
     logging.info(f'Writing data to {index}.csv')
@@ -44,6 +44,48 @@ def malicious_urls(es_client, url, index, stream):
     load_csv_to_es(f'{index}.csv', es_client, index)
 
     logging.info(f'Completed loading {index} into Elasticsearch')
+
+def malicious_urls_from_file(es_client, file_path, index):
+    logging.info(f'Reading data from {file_path}')
+    try:
+        with open(file_path, 'r') as file:
+            urls = file.readlines()
+    except Exception as e:
+        logging.error(f'Error reading file {file_path}: {e}')
+        return
+
+    if not es_client.indices.exists(index=index):
+        logging.info(f'Index {index} does not exist. Creating index {index}')
+        es_client.indices.create(index=index)
+
+    logging.info(f'Writing data to {index}.csv')
+    with open(f'{index}.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['url', 'type'])
+        for url in urls:
+            url = url.strip()
+
+            # Check if the URL is already in Elasticsearch
+            res = es_client.search(index=index, body={
+                'query': {
+                    'term': {
+                        'url.keyword': url
+                    }
+                }
+            })
+
+            # If the URL is already in Elasticsearch, skip it
+            if res['hits']['total']['value'] == 0:
+                logging.info(f'{url} already exists in {index}')
+                continue
+
+            writer.writerow([url, '1'])
+
+    logging.info(f'Loading data into Elasticsearch')
+    load_csv_to_es(f'{index}.csv', es_client, index)
+
+    logging.info(f'Completed loading {index} into Elasticsearch')
+
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -77,6 +119,9 @@ def main():
 
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
     malicious_urls(es_client, PHISHING_DATABASE_URL, 'raw', True)
+
+    logging.info('Processing malicious URLs for backup.txt')
+    malicious_urls_from_file(es_client, 'backup.txt', 'raw')
     
     logging.info('Completed all tasks.') 
 
