@@ -120,8 +120,9 @@ def main():
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
     malicious_urls(es_client, PHISHING_DATABASE_URL, 'raw', True)
 
-    logging.info('Processing malicious URLs for backup.txt')
-    malicious_urls_from_file(es_client, 'backup.txt', 'raw')
+    # One time use in case the database is cleared and we need to re-import the data
+    # logging.info('Processing malicious URLs for backup.txt')
+    # malicious_urls_from_file(es_client, 'backup.txt', 'raw')
     
     logging.info('Completed all tasks.') 
 
