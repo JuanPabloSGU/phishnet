@@ -2,5 +2,6 @@
 artint/data/
 /artint/src/features/__pycache__
 /extract/__pycache__
+/gathering/__pycache__
 venv
 *.env
