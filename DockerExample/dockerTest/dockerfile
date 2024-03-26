@@ -1,0 +1,7 @@
+FROM nvcr.io/nvidia/tritonserver:24.01-py3
+RUN mkdir -p /models
+COPY model-repository/ /models
+EXPOSE 8000
+EXPOSE 8001
+EXPOSE 8002
+CMD ["tritonserver", "--model-repository=/models"]

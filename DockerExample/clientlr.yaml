@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: clientlr
+spec:
+    containers:
+    -   name: clientlr
+        image: greako/client_lr:latest

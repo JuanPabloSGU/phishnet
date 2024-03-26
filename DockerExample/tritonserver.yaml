@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: tritonserver
+    labels:
+        app: tritonserverhere
+spec:
+    containers:
+    -   name: tritonserver
+        image: greako/tritontest:latest
+        ports:
+        - containerPort: 8000
