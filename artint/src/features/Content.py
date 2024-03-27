@@ -14,8 +14,7 @@ def generate_user_agent(self) -> str:
     return user_agent
 
 class Content:
-    def __init__(self, urls: list) -> None:
-        self.urls = urls
+    def __init__(self) -> None:
         self.user_agent = generate_user_agent(self)
         self.headers = {}
         self.headers['User-Agent'] = self.user_agent
@@ -224,45 +223,44 @@ class Content:
             return -1
 
 
-    def extract(self):
+    def extract(self, url):
+        self.feat_dict['url'] = url
 
-        for url in self.urls:
-            self.feat_dict['url'] = url
+        try:
+            response = self.make_request(url, timeout=5, retries=3)
+            if response is None:
+                return {}
+            self.feat_dict['redirects'] = self.redirects(response)
+        except Exception as e:
+            print(f'Error making request: {e}')
+            return {}
 
-            try:
-                response = self.make_request(url, timeout=5, retries=3)
-                if response is None:
-                    return
-                self.feat_dict['redirects'] = self.redirects(response)
-            except Exception as e:
-                print(f'Error making request: {e}')
-                return
+        try:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            self.feat_dict['len_html'] = len(soup.prettify())
+            self.feat_dict['len_text'] = len(soup.get_text())
+            self.feat_dict['len_links'] = self.get_links(soup)
+            self.feat_dict['len_mail_usage_forms'] = self.get_mail_usage_form(soup)
+            self.feat_dict['meta_script_link_percentage'] = self.meta_script_link_percentage(soup)
+            self.feat_dict['mouseover_changes'] = self.get_mouseover_changes(soup)
+            self.feat_dict['right_click_disabled'] = self.get_right_click_disabled(soup)
+            self.feat_dict['keyboard_shortcuts_disabled'] = self.get_keyboard_shortcuts_disabled(soup)
+            self.feat_dict['copy_paste_disabled'] = self.get_copy_paste_disabled(soup)
+            self.feat_dict['drag_drop_disabled'] = self.get_drag_drop_disabled(soup)
+            self.feat_dict['popup_window_has_text_field'] = self.popup_window_has_text_field(soup)
+            self.feat_dict['use_iframe'] = self.use_iframe(soup)
+            self.feat_dict['use_upload'] = self.use_upload(soup)
+            self.feat_dict['use_download'] = self.use_download(soup)
+            self.feat_dict['use_http_link'] = self.use_http_link(soup)
 
-            try:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                self.feat_dict['len_html'] = len(soup.prettify())
-                self.feat_dict['len_text'] = len(soup.get_text())
-                self.feat_dict['len_links'] = self.get_links(soup)
-                self.feat_dict['len_mail_usage_forms'] = self.get_mail_usage_form(soup)
-                self.feat_dict['meta_script_link_percentage'] = self.meta_script_link_percentage(soup)
-                self.feat_dict['mouseover_changes'] = self.get_mouseover_changes(soup)
-                self.feat_dict['right_click_disabled'] = self.get_right_click_disabled(soup)
-                self.feat_dict['keyboard_shortcuts_disabled'] = self.get_keyboard_shortcuts_disabled(soup)
-                self.feat_dict['copy_paste_disabled'] = self.get_copy_paste_disabled(soup)
-                self.feat_dict['drag_drop_disabled'] = self.get_drag_drop_disabled(soup)
-                self.feat_dict['popup_window_has_text_field'] = self.popup_window_has_text_field(soup)
-                self.feat_dict['use_iframe'] = self.use_iframe(soup)
-                self.feat_dict['use_upload'] = self.use_upload(soup)
-                self.feat_dict['use_download'] = self.use_download(soup)
-                self.feat_dict['use_http_link'] = self.use_http_link(soup)
+        except Exception as e:
+            print(f'Error parsing HTML: {e}')
+            return {}
+        
+        return self.feat_dict
 
-            except Exception as e:
-                print(f'Error parsing HTML: {e}')
-                return
-
-# example = Content(['https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'])
-# example.extract()
-# print(example.feat_dict)
+# example = Content()
+# print(example.extract('https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'))
 
 # for keys in example.feat_dict:
 #     print(keys + " " + str(type(example.feat_dict[keys])))
