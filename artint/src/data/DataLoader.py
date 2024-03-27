@@ -1,3 +1,4 @@
+from sklearn.model_selection import train_test_split
 
 class DataLoader:
     def __init__(self, response) -> None:
@@ -27,6 +28,9 @@ class DataLoader:
 
     def get_alphabetical_feats(self):
         return self.get_type_feats((str))
+    
+    def train_test_split(self, train_split, random_state): 
+        return train_test_split(self.data, train_size=train_split, random_state=random_state)
     
 r = {}
 dl = DataLoader(
