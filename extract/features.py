@@ -23,6 +23,13 @@ def get_es_index(es, index):
     logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
     return all_data
 
+# Search function for URLs in Elasticsearch, avoids '413 Request Entity Too Large' error
+def chunked_search(es, index, urls, chunk_size=1000):
+    for i in range(0, len(urls), chunk_size):
+        chunk = urls[i:i+chunk_size]
+        query = {"query": {"terms": {"url.keyword": chunk}}}
+        yield from es.search(index=index, body=query)['hits']['hits']
+
 # Function to extract all features from a URL
 def extract_features(url_dicts):
     content_extractor = Content()
@@ -61,9 +68,9 @@ def main():
 
     # Get the urls that have not yet been processed along with their type
     unique_urls = {doc['_source']['url'] for doc in raw_data}
-    featext_query = {"query": {"terms": {"url.keyword": list(unique_urls)}}}
-    result = es_client.search(index="featext", body=featext_query)
-    processed_urls = {hit['_source']['url'] for hit in result['hits']['hits']}
+    processed_urls = set()
+    for hit in chunked_search(es_client, "featext", list(unique_urls)):
+        processed_urls.add(hit['_source']['url'])
     unprocessed_url_and_type = ({'url': doc['_source']['url'], 'type': doc['_source']['type']} 
                         for doc in raw_data if doc['_source']['url'] not in processed_urls)
     
