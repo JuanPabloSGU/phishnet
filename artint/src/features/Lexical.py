@@ -63,7 +63,7 @@ class Lexical:
     @staticmethod
     def uses_https(scheme: str):
         """Check if a given URL scheme is HTTPS."""
-        return scheme == 'https'
+        return 1 if scheme == 'https' else 0
 
     @staticmethod
     def shannon_entropy(url: str):
@@ -114,4 +114,14 @@ class Lexical:
         consecutive_chars = re.findall(r'(.)\1+', url) # Find all consecutive characters
         total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
         return 0 if len(url) == 0 else total_consecutive_length / len(url)
-    
+
+
+# example = Lexical(['https://www.google.com'])
+# example.extract()
+# print(example.feat_dict)
+
+# for keys in example.feat_dict:
+#     if type(example.feat_dict[keys]) != int and type(example.feat_dict[keys]) != float and type(example.feat_dict[keys]) != str:
+#         print(keys + " " + str(type(example.feat_dict[keys])))
+#         print(example.feat_dict[keys])
+#         print()
