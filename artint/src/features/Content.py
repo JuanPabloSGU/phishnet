@@ -41,13 +41,19 @@ class Content:
         """
         Return the number of redirects in a given response.
         """
-        return len(response.history)
+        try:
+            return len(response.history)
+        except:
+            return -1
     
     def get_links(self, soup: BeautifulSoup) -> int:
         """
         Return the number of links in a given HTML soup.
         """
-        return len(soup.find_all('a'))
+        try:
+            return len(soup.find_all('a'))
+        except:
+            return -1
 
     def get_mail_usage_form(self, soup: BeautifulSoup) -> int:
         """
@@ -67,126 +73,155 @@ class Content:
         """
         Returns the percentage of meta, script, and link tags.
         """
-        meta = soup.find_all('meta')
-        script = soup.find_all('script')
-        link_tags = soup.find_all('link')
+        try:
+            meta = soup.find_all('meta')
+            script = soup.find_all('script')
+            link_tags = soup.find_all('link')
 
-        meta_links = sum([1 for tag in meta if tag.has_attr('href')])
-        script_links = sum([1 for tag in script if tag.has_attr('src')])
-        link_links = sum([1 for tag in link_tags if tag.has_attr('href')])
+            meta_links = sum([1 for tag in meta if tag.has_attr('href')])
+            script_links = sum([1 for tag in script if tag.has_attr('src')])
+            link_links = sum([1 for tag in link_tags if tag.has_attr('href')])
 
-        total_links = meta_links + script_links + link_links
-        if total_links == 0:
-            return "0, 0, 0"
-        
-        meta_percentage = meta_links / total_links
-        script_percentage = script_links / total_links
-        link_percentage = link_links / total_links
+            total_links = meta_links + script_links + link_links
+            if total_links == 0:
+                return "0, 0, 0"
+            
+            meta_percentage = meta_links / total_links
+            script_percentage = script_links / total_links
+            link_percentage = link_links / total_links
 
-        return str(meta_percentage) + ", " + str(script_percentage) + ", " + str(link_percentage)
+            return str(meta_percentage) + ", " + str(script_percentage) + ", " + str(link_percentage)
+        except:
+            return -1
 
     def get_mouseover_changes(self, soup: BeautifulSoup) -> int:
         """
         Returns if mouseover events change the status bar (1), otherwise 0.
         """
-        onMouseOver_tags = soup.find_all(onmouseover=True)
-        for tag in onMouseOver_tags:
-            if 'window.status' in str(tag):
-                return 1
-        return 0
+        try:
+            onMouseOver_tags = soup.find_all(onmouseover=True)
+            for tag in onMouseOver_tags:
+                if 'window.status' in str(tag):
+                    return 1
+            return 0
+        except:
+            return -1
 
     def get_right_click_disabled(self, soup: BeautifulSoup) -> int:
         """
         Returns if right click is disabled (1), otherwize 0.
         """
-        for tag in soup.find_all('script'):
-            if 'event.button==2' in tag.text:
-                return 1
-        return 0
+        try:
+            for tag in soup.find_all('script'):
+                if 'event.button==2' in tag.text:
+                    return 1
+            return 0
+        except:
+            return -1
 
     def get_keyboard_shortcuts_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if keyboard shortcuts are disabled (1), otherwise 0.
         """
-        for tag in soup.find_all('script'):
-            if 'event.preventDefault()' in tag.text:
-                return 1
-        return 0
-
+        try:
+            for tag in soup.find_all('script'):
+                if 'event.preventDefault()' in tag.text:
+                    return 1
+            return 0
+        except:
+            return -1
 
     def get_copy_paste_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if copy-paste is disabled (1), otherwise 0.
         """
-        for tag in soup.find_all('script'):
-            if 'event.clipboardData' in tag.text or 'event.preventDefault()' in tag.text:
-                return 1
-        return 0
+        try:
+            for tag in soup.find_all('script'):
+                if 'event.clipboardData' in tag.text or 'event.preventDefault()' in tag.text:
+                    return 1
+            return 0
+        except:
+            return -1
 
     def get_drag_drop_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if drag and drop is disabled (1), otherwise 0.
         """
-        for tag in soup.find_all('script'):
-            if 'event.dataTransfer' in tag.text or 'event.preventDefault()' in tag.text:
-                return 1
-        return 0
+        try:
+            for tag in soup.find_all('script'):
+                if 'event.dataTransfer' in tag.text or 'event.preventDefault()' in tag.text:
+                    return 1
+            return 0
+        except:
+            return -1
 
     def popup_window_has_text_field(self, soup: BeautifulSoup) -> int:
         """
         Return if a popup window has a text field (1), otherwise 0.
         """
-        popups = soup.find_all('div', {'class': 'popup'})
-        for popup in popups:
-            if popup.find('input', {'type': 'text'}):
-                return 1
-        return 0
+        try:
+            popups = soup.find_all('div', {'class': 'popup'})
+            for popup in popups:
+                if popup.find('input', {'type': 'text'}):
+                    return 1
+            return 0
+        except:
+            return -1
 
     def use_iframe(self, soup: BeautifulSoup) -> int:
         """
         Return if an iframe is used (1), otherwise 0.
         """
-        iframes = soup.find_all('iframe')
-        if len(iframes) > 0:
-            return 1
-        return 0
+        try:
+            iframes = soup.find_all('iframe')
+            if len(iframes) > 0:
+                return 1
+            return 0
+        except:
+            return -1
 
     def use_upload(self, soup: BeautifulSoup) -> int:
         """
         Return if an upoload is present (1), otherwise 0.
         """
-
-        upload = soup.find_all('input', type="file")
-        if len(upload) > 0:
-            return 1
-        return 0
+        try:
+            upload = soup.find_all('input', type="file")
+            if len(upload) > 0:
+                return 1
+            return 0
+        except:
+            return -1
     
     def use_download(self, soup: BeautifulSoup) -> int:
         """
         Return if an download is present (1), otherwise 0.
         """
+        try:
+            all_links = soup.find_all('a')
 
-        all_links = soup.find_all('a')
-
-        for link in all_links:
-            href = link.get('href')
-            if href:
-                if 'download' in href.lower():
-                    return 1
-        return 0
+            for link in all_links:
+                href = link.get('href')
+                if href:
+                    if 'download' in href.lower():
+                        return 1
+            return 0
+        except:
+            return -1
 
     def use_http_link(self, soup: BeautifulSoup) -> int:
         """
         Return if a http link is present in the http
         """
-        
-        all_links = soup.find_all('a')
-        for link in all_links:
-            href = link.get('href')
-            if href:
-                if 'http:' in href.lower():
-                    return 1
-        return 0
+        try:
+            all_links = soup.find_all('a')
+            for link in all_links:
+                href = link.get('href')
+                if href:
+                    if 'http:' in href.lower():
+                        return 1
+            return 0
+        except:
+            return -1
 
 
     def extract(self):
@@ -230,7 +265,6 @@ class Content:
 # print(example.feat_dict)
 
 # for keys in example.feat_dict:
-#     if type(example.feat_dict[keys]) != int and type(example.feat_dict[keys]) != float and type(example.feat_dict[keys]) != str:
-#         print(keys + " " + str(type(example.feat_dict[keys])))
-#         print(example.feat_dict[keys])
-#         print()
+#     print(keys + " " + str(type(example.feat_dict[keys])))
+#     print(example.feat_dict[keys])
+#     print()
