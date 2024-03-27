@@ -45,31 +45,46 @@ class Lexical:
 
     @staticmethod
     def component_ratio(one, two):
-        p = len(one) if type(one) is str else one
-        q = len(two) if type(two) is str else two
+        try:
+            p = len(one) if type(one) is str else one
+            q = len(two) if type(two) is str else two
 
-        if not(p and q):
-            return 0
-        return p / q
+            if not(p and q):
+                return 0
+            return p / q
+        except:
+            return -1
 
     @staticmethod
     def count_digits(_str: str):
-        return sum(c.isdigit() for c in _str)
+        try:
+            return sum(c.isdigit() for c in _str)
+        except:
+            return -1
 
     @staticmethod
     def count_letters(_str: str):
-        return sum(c.isalpha() for c in _str)
+        try:
+            return sum(c.isalpha() for c in _str)
+        except:
+            return -1
     
     @staticmethod
     def uses_https(scheme: str):
         """Check if a given URL scheme is HTTPS."""
-        return 1 if scheme == 'https' else 0
+        try:
+            return 1 if scheme == 'https' else 0
+        except:
+            return -1
 
     @staticmethod
     def shannon_entropy(url: str):
         """Calculate the Shannon entropy of a URL. Used to catch URLs with high randomness."""
-        prob = [float(url.count(c)) / len(url) for c in dict.fromkeys(list(url))]
-        return - sum([p * log2(p) for p in prob])
+        try:
+            prob = [float(url.count(c)) / len(url) for c in dict.fromkeys(list(url))]
+            return - sum([p * log2(p) for p in prob])
+        except:
+            return -1
     
     @staticmethod
     def relative_entropy(url: str):
@@ -79,22 +94,31 @@ class Lexical:
     @staticmethod
     def alphabet_entropy(netloc):
         """Calculate the entropy of the domain based on its alphabetic characters."""
+        try:
         # Extract the domain name and focus only on alphabetic characters
-        domain = netloc.split(':')[0]  # Remove port number if present
-        alphabet = re.sub(r'[^a-zA-Z]', '', domain)  # Keep only alphabetic characters
-        alphabet_freq = Counter(alphabet) # Frequency of each alphabetic character
-        total_chars = len(alphabet)
-        return -sum((count / total_chars) * log2(count / total_chars) for count in alphabet_freq.values() if count > 0)
-    
+            domain = netloc.split(':')[0]  # Remove port number if present
+            alphabet = re.sub(r'[^a-zA-Z]', '', domain)  # Keep only alphabetic characters
+            alphabet_freq = Counter(alphabet) # Frequency of each alphabetic character
+            total_chars = len(alphabet)
+            return -sum((count / total_chars) * log2(count / total_chars) for count in alphabet_freq.values() if count > 0)
+        except:
+            return -1
+
     @staticmethod
     def count_sub(_str: str, _sub: str):
         """Count occurences of substring in string"""
-        return _str.count(_sub)
+        try:
+            return _str.count(_sub)
+        except:
+            return -1
     
     @staticmethod
     def no_of_directories(path: str):
         """Count the number of directories in the URL path."""
-        return len(path.split('/')) - 1
+        try:
+            return len(path.split('/')) - 1
+        except:
+            return -1
     
     @staticmethod
     def contains_ip_address(netloc: str):
@@ -111,9 +135,12 @@ class Lexical:
     @staticmethod
     def character_continuity_rate(url: str):
         """Calculate the Character Continuity Rate (CCR) of a URL."""
-        consecutive_chars = re.findall(r'(.)\1+', url) # Find all consecutive characters
-        total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
-        return 0 if len(url) == 0 else total_consecutive_length / len(url)
+        try:
+            consecutive_chars = re.findall(r'(.)\1+', url) # Find all consecutive characters
+            total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
+            return 0 if len(url) == 0 else total_consecutive_length / len(url)
+        except:
+            return -1
 
 
 # example = Lexical(['https://www.google.com'])
@@ -121,7 +148,6 @@ class Lexical:
 # print(example.feat_dict)
 
 # for keys in example.feat_dict:
-#     if type(example.feat_dict[keys]) != int and type(example.feat_dict[keys]) != float and type(example.feat_dict[keys]) != str:
-#         print(keys + " " + str(type(example.feat_dict[keys])))
-#         print(example.feat_dict[keys])
-#         print()
+#     print(keys + " " + str(type(example.feat_dict[keys])))
+#     print(example.feat_dict[keys])
+#     print()
