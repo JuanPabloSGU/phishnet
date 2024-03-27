@@ -24,12 +24,18 @@ def get_es_index(es, index):
     return all_data
 
 # Function to extract all features from a URL
-def extract_features(url):
-    features = {}
-    for feature_class in [Content, Domain, Lexical]:
-        feature_extractor = feature_class([url])
-        feature_extractor.extract()
-        features.update(feature_extractor.feat_dict)
+def extract_features(url_dicts):
+    content_extractor = Content()
+    domain_extractor = Domain()
+    lexical_extractor = Lexical()
+    features = []
+    for url_dict in url_dicts:
+        url = url_dict['url']
+        type = url_dict['type']
+        content_features = content_extractor.extract(url)
+        domain_features = domain_extractor.extract(url)
+        lexical_features = lexical_extractor.extract(url)
+        features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
     return features
 
 def main():
@@ -47,23 +53,22 @@ def main():
         request_timeout=60
     )
 
+    if not es_client.indices.exists(index="featext"):
+        logging.info(f'Index featext does not exist. Creating index featext')
+        es_client.indices.create(index="featext")
+
     raw_data = get_es_index(es_client, 'raw')
-    data = []
-    processed_urls = set()  # Set to store processed URLs (prevent duplicates)
 
-    logging.info('Extracting features from raw data')
-    for doc in raw_data:
-        url = doc['_source']['url']
-        type = doc['_source']['type']
-
-        # If URL is NOT in 'featext', extract features and append to data
-        if url not in processed_urls:
-            query = {"query": {"term": {"url.keyword": url}}}
-            result = es_client.search(index="featext", body=query)
-            if result["hits"]["total"]["value"] == 0:
-                features = extract_features(url)
-                data.append({'url': url, 'type': type, **features})
-                processed_urls.add(url)
+    # Get the urls that have not yet been processed along with their type
+    unique_urls = {doc['_source']['url'] for doc in raw_data}
+    featext_query = {"query": {"terms": {"url.keyword": list(unique_urls)}}}
+    result = es_client.search(index="featext", body=featext_query)
+    processed_urls = {hit['_source']['url'] for hit in result['hits']['hits']}
+    unprocessed_url_and_type = ({'url': doc['_source']['url'], 'type': doc['_source']['type']} 
+                        for doc in raw_data if doc['_source']['url'] not in processed_urls)
+    
+    logging.info('Extracting features')
+    data = extract_features(unprocessed_url_and_type)
 
     logging.info('Saving features to features.csv')
     df = pd.DataFrame(data)
