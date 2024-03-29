@@ -1,8 +1,11 @@
+import concurrent.futures
 import logging
 import os
 import pandas as pd
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+logging.basicConfig(level=logging.INFO)
 
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
@@ -10,6 +13,21 @@ from artint.src.features.Content import Content
 from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from gathering.utils import load_csv_to_es
+
+def initialize_es_client():
+    logging.info('Loading environment variables')
+    load_dotenv('.env')
+    ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+    ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
+    ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
+
+    logging.info('Connecting to Elasticsearch')
+    es_client = Elasticsearch(
+        ELASTICSEARCH_HOST,
+        basic_auth=(ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD),
+        request_timeout=60
+    )
+    return es_client
 
 # Function to get all data from an Elasticsearch index
 def get_es_index(es, index):
@@ -45,20 +63,20 @@ def extract_features(url_dicts):
         features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
     return features
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    logging.info('Loading environment variables')
-    load_dotenv('.env')
-    ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
-    ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
-    ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
+def process_and_upload_batch(url_dicts_batch):
+    es_client = initialize_es_client()
 
-    logging.info('Connecting to Elasticsearch')
-    es_client = Elasticsearch(
-        ELASTICSEARCH_HOST,
-        basic_auth=(ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD),
-        request_timeout=60
-    )
+    logging.info('Extracting features')
+    data = extract_features(url_dicts_batch)
+
+    logging.info('Saving features to features.csv')
+    df = pd.DataFrame(data)
+    df.to_csv('features.csv', index=False)
+
+    load_csv_to_es('features.csv', es_client, 'featext')
+
+def main():
+    es_client = initialize_es_client()
 
     if not es_client.indices.exists(index="featext"):
         logging.info(f'Index featext does not exist. Creating index featext')
@@ -71,17 +89,20 @@ def main():
     processed_urls = set()
     for hit in chunked_search(es_client, "featext", list(unique_urls)):
         processed_urls.add(hit['_source']['url'])
-    unprocessed_url_and_type = ({'url': doc['_source']['url'], 'type': doc['_source']['type']} 
-                        for doc in raw_data if doc['_source']['url'] not in processed_urls)
+    unprocessed_url_and_type = [{'url': doc['_source']['url'], 'type': doc['_source']['type']} 
+                        for doc in raw_data if doc['_source']['url'] not in processed_urls]
     
-    logging.info('Extracting features')
-    data = extract_features(unprocessed_url_and_type)
+    futures = []
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for i in range(0, len(unprocessed_url_and_type), 1000):
+            batch = unprocessed_url_and_type[i:i+1000]
+            future = executor.submit(process_and_upload_batch, batch)
+            futures.append(future)
 
-    logging.info('Saving features to features.csv')
-    df = pd.DataFrame(data)
-    df.to_csv('features.csv', index=False)
-
-    load_csv_to_es('features.csv', es_client, 'featext')
+    # Wait for all processes to complete
+    for future in concurrent.futures.as_completed(futures):
+        if future.exception() is not None:
+            logging.error(f"Error in thread: {future.exception()}")
 
 if __name__ == "__main__":
     main()

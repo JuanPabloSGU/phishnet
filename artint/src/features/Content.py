@@ -43,7 +43,7 @@ class Content:
         try:
             return len(response.history)
         except:
-            return -1
+            return None
     
     def get_links(self, soup: BeautifulSoup) -> int:
         """
@@ -52,7 +52,7 @@ class Content:
         try:
             return len(soup.find_all('a'))
         except:
-            return -1
+            return None
 
     def get_mail_usage_form(self, soup: BeautifulSoup) -> int:
         """
@@ -91,7 +91,7 @@ class Content:
 
             return str(meta_percentage) + ", " + str(script_percentage) + ", " + str(link_percentage)
         except:
-            return -1
+            return None
 
     def get_mouseover_changes(self, soup: BeautifulSoup) -> int:
         """
@@ -104,7 +104,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def get_right_click_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -116,7 +116,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def get_keyboard_shortcuts_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -128,7 +128,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def get_copy_paste_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -140,7 +140,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def get_drag_drop_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -152,7 +152,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def popup_window_has_text_field(self, soup: BeautifulSoup) -> int:
         """
@@ -165,7 +165,7 @@ class Content:
                     return 1
             return 0
         except:
-            return -1
+            return None
 
     def use_iframe(self, soup: BeautifulSoup) -> int:
         """
@@ -177,7 +177,7 @@ class Content:
                 return 1
             return 0
         except:
-            return -1
+            return None
 
     def use_upload(self, soup: BeautifulSoup) -> int:
         """
@@ -189,7 +189,7 @@ class Content:
                 return 1
             return 0
         except:
-            return -1
+            return None
     
     def use_download(self, soup: BeautifulSoup) -> int:
         """
@@ -205,7 +205,7 @@ class Content:
                         return 1
             return 0
         except:
-            return -1
+            return None
 
     def use_http_link(self, soup: BeautifulSoup) -> int:
         """
@@ -220,7 +220,7 @@ class Content:
                         return 1
             return 0
         except:
-            return -1
+            return None
 
 
     def extract(self, url):
