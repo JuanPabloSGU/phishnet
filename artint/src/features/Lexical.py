@@ -51,21 +51,21 @@ class Lexical:
                 return 0
             return p / q
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_digits(_str: str):
         try:
             return sum(c.isdigit() for c in _str)
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_letters(_str: str):
         try:
             return sum(c.isalpha() for c in _str)
         except:
-            return -1
+            return None
     
     @staticmethod
     def uses_https(scheme: str):
@@ -73,7 +73,7 @@ class Lexical:
         try:
             return 1 if scheme == 'https' else 0
         except:
-            return -1
+            return None
 
     @staticmethod
     def shannon_entropy(url: str):
@@ -82,7 +82,7 @@ class Lexical:
             prob = [float(url.count(c)) / len(url) for c in dict.fromkeys(list(url))]
             return - sum([p * log2(p) for p in prob])
         except:
-            return -1
+            return None
     
     @staticmethod
     def relative_entropy(url: str):
@@ -100,7 +100,7 @@ class Lexical:
             total_chars = len(alphabet)
             return -sum((count / total_chars) * log2(count / total_chars) for count in alphabet_freq.values() if count > 0)
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_sub(_str: str, _sub: str):
@@ -108,7 +108,7 @@ class Lexical:
         try:
             return _str.count(_sub)
         except:
-            return -1
+            return None
     
     @staticmethod
     def no_of_directories(path: str):
@@ -116,7 +116,7 @@ class Lexical:
         try:
             return len(path.split('/')) - 1
         except:
-            return -1
+            return None
     
     @staticmethod
     def contains_ip_address(netloc: str):
@@ -138,7 +138,7 @@ class Lexical:
             total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
             return 0 if len(url) == 0 else total_consecutive_length / len(url)
         except:
-            return -1
+            return None
 
 
 # example = Lexical()
