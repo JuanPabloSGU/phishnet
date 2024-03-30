@@ -8,40 +8,38 @@ from ipaddress import ip_address
 
 class Lexical: 
 
-    def __init__(self, urls: list) -> None:
-        self.urls = urls
+    def __init__(self) -> None:
         self.feat_dict = {}
 
-    def extract(self) -> list: 
+    def extract(self, url): 
+        scheme, netloc, path, params, query, fragment = urlparse(url)
 
-        for url in self.urls:
-            scheme, netloc, path, params, query, fragment = urlparse(url)
+        self.feat_dict[f'url'] = url
+        self.feat_dict['len_url'] = len(url)
 
-            self.feat_dict[f'url'] = url
-            self.feat_dict['len_url'] = len(url)
+        for component in [netloc, path]:
+            name = f'{component=}'.partition('=')[0]
 
-            for component in [netloc, path]:
-                name = f'{component=}'.partition('=')[0]
+            self.feat_dict[f'len_{name}'] = len(component)
+            self.feat_dict[f'count_digits_{name}'] = Lexical.count_digits(component)
+            self.feat_dict[f'count_letters_{name}'] = Lexical.count_letters(component)
+            self.feat_dict[f'ratio_digits_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_digits_{name}'], url)
+            self.feat_dict[f'ratio_letters_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_letters_{name}'], url)
+    
+        self.feat_dict['count_dots_url'] = Lexical.count_sub(url, '.')
+        self.feat_dict['count_percent_url'] = Lexical.count_sub(url, '%')
+        self.feat_dict['count_hash_url'] = Lexical.count_sub(url, '#')
+        self.feat_dict['count_ats_url'] = Lexical.count_sub(url, '@')
+        self.feat_dict['count_embed_url'] = Lexical.count_sub(url, '//')
 
-                self.feat_dict[f'len_{name}'] = len(component)
-                self.feat_dict[f'count_digits_{name}'] = Lexical.count_digits(component)
-                self.feat_dict[f'count_letters_{name}'] = Lexical.count_letters(component)
-                self.feat_dict[f'ratio_digits_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_digits_{name}'], url)
-                self.feat_dict[f'ratio_letters_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'count_letters_{name}'], url)
-        
-            self.feat_dict['count_dots_url'] = Lexical.count_sub(url, '.')
-            self.feat_dict['count_percent_url'] = Lexical.count_sub(url, '%')
-            self.feat_dict['count_hash_url'] = Lexical.count_sub(url, '#')
-            self.feat_dict['count_ats_url'] = Lexical.count_sub(url, '@')
-            self.feat_dict['count_embed_url'] = Lexical.count_sub(url, '//')
+        self.feat_dict['use_https'] = Lexical.uses_https(scheme)
+        self.feat_dict['no_of_directories'] = Lexical.no_of_directories(path)
+        self.feat_dict['contains_ip_address'] = Lexical.contains_ip_address(netloc)
+        self.feat_dict['character_continuity_rate_url'] = Lexical.character_continuity_rate(url)
 
-            self.feat_dict['use_https'] = Lexical.uses_https(scheme)
-            self.feat_dict['no_of_directories'] = Lexical.no_of_directories(path)
-            self.feat_dict['contains_ip_address'] = Lexical.contains_ip_address(netloc)
-            self.feat_dict['character_continuity_rate_url'] = Lexical.character_continuity_rate(url)
+        self.feat_dict['shannon_entropy_url'] = Lexical.shannon_entropy(url)
 
-            self.feat_dict['shannon_entropy_url'] = Lexical.shannon_entropy(url)
-
+        return self.feat_dict
 
     @staticmethod
     def component_ratio(one, two):
@@ -53,21 +51,21 @@ class Lexical:
                 return 0
             return p / q
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_digits(_str: str):
         try:
             return sum(c.isdigit() for c in _str)
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_letters(_str: str):
         try:
             return sum(c.isalpha() for c in _str)
         except:
-            return -1
+            return None
     
     @staticmethod
     def uses_https(scheme: str):
@@ -75,7 +73,7 @@ class Lexical:
         try:
             return 1 if scheme == 'https' else 0
         except:
-            return -1
+            return None
 
     @staticmethod
     def shannon_entropy(url: str):
@@ -84,7 +82,7 @@ class Lexical:
             prob = [float(url.count(c)) / len(url) for c in dict.fromkeys(list(url))]
             return - sum([p * log2(p) for p in prob])
         except:
-            return -1
+            return None
     
     @staticmethod
     def relative_entropy(url: str):
@@ -102,7 +100,7 @@ class Lexical:
             total_chars = len(alphabet)
             return -sum((count / total_chars) * log2(count / total_chars) for count in alphabet_freq.values() if count > 0)
         except:
-            return -1
+            return None
 
     @staticmethod
     def count_sub(_str: str, _sub: str):
@@ -110,7 +108,7 @@ class Lexical:
         try:
             return _str.count(_sub)
         except:
-            return -1
+            return None
     
     @staticmethod
     def no_of_directories(path: str):
@@ -118,7 +116,7 @@ class Lexical:
         try:
             return len(path.split('/')) - 1
         except:
-            return -1
+            return None
     
     @staticmethod
     def contains_ip_address(netloc: str):
@@ -140,12 +138,11 @@ class Lexical:
             total_consecutive_length = sum(len(match) for match in consecutive_chars) # Count the total length of all consecutive characters
             return 0 if len(url) == 0 else total_consecutive_length / len(url)
         except:
-            return -1
+            return None
 
 
-# example = Lexical(['https://www.google.com'])
-# example.extract()
-# print(example.feat_dict)
+# example = Lexical()
+# print(example.extract('https://www.google.com'))
 
 # for keys in example.feat_dict:
 #     print(keys + " " + str(type(example.feat_dict[keys])))
