@@ -41,12 +41,11 @@ def get_es_index(es, index):
     logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
     return all_data
 
-# Search function for URLs in Elasticsearch, avoids '413 Request Entity Too Large' error
 def chunked_search(es, index, urls, chunk_size=1000):
     for i in range(0, len(urls), chunk_size):
         chunk = urls[i:i+chunk_size]
         query = {"query": {"terms": {"url.keyword": chunk}}}
-        yield from es.search(index=index, body=query)['hits']['hits']
+        yield from es.search(index=index, body=query, size=len(chunk))['hits']['hits']
 
 # Function to extract all features from a URL
 def extract_features(url_dicts):
@@ -91,18 +90,24 @@ def main():
         processed_urls.add(hit['_source']['url'])
     unprocessed_url_and_type = [{'url': doc['_source']['url'], 'type': doc['_source']['type']} 
                         for doc in raw_data if doc['_source']['url'] not in processed_urls]
-    
+    logging.info(f'Number of unprocessed URLs: {len(unprocessed_url_and_type)}')
+
+    batch_size = 1000
     futures = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        for i in range(0, len(unprocessed_url_and_type), 1000):
-            batch = unprocessed_url_and_type[i:i+1000]
+        for i in range(0, len(unprocessed_url_and_type), batch_size):
+            batch = unprocessed_url_and_type[i:i+batch_size]
             future = executor.submit(process_and_upload_batch, batch)
             futures.append(future)
 
     # Wait for all processes to complete
+    completed_tasks = 0
     for future in concurrent.futures.as_completed(futures):
         if future.exception() is not None:
             logging.error(f"Error in thread: {future.exception()}")
+        else:
+            completed_tasks += batch_size
+            logging.info(f'Processed {completed_tasks} out of {len(unprocessed_url_and_type)} URLs')
 
 if __name__ == "__main__":
     main()
