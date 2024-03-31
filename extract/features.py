@@ -41,6 +41,7 @@ def get_es_index(es, index):
     logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
     return all_data
 
+# Search function for URLs in Elasticsearch, avoids '413 Request Entity Too Large' error
 def chunked_search(es, index, urls, chunk_size=1000):
     for i in range(0, len(urls), chunk_size):
         chunk = urls[i:i+chunk_size]
