@@ -74,6 +74,7 @@ def process_and_upload_batch(url_dicts_batch):
     df.to_csv('features.csv', index=False)
 
     load_csv_to_es('features.csv', es_client, 'featext')
+    return len(url_dicts_batch)
 
 def main():
     es_client = initialize_es_client()
@@ -95,6 +96,7 @@ def main():
 
     batch_size = 1000
     futures = []
+    completed_tasks = 0
     with concurrent.futures.ProcessPoolExecutor() as executor:
         for i in range(0, len(unprocessed_url_and_type), batch_size):
             batch = unprocessed_url_and_type[i:i+batch_size]
@@ -102,12 +104,11 @@ def main():
             futures.append(future)
 
     # Wait for all processes to complete
-    completed_tasks = 0
     for future in concurrent.futures.as_completed(futures):
         if future.exception() is not None:
             logging.error(f"Error in thread: {future.exception()}")
         else:
-            completed_tasks += batch_size
+            completed_tasks += future.result()
             logging.info(f'Processed {completed_tasks} out of {len(unprocessed_url_and_type)} URLs')
 
 if __name__ == "__main__":
