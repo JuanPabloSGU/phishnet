@@ -14,6 +14,10 @@ from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from gathering.utils import load_csv_to_es
 
+content_extractor = Content()
+domain_extractor = Domain()
+lexical_extractor = Lexical()
+
 def initialize_es_client():
     logging.info('Loading environment variables')
     load_dotenv('.env')
@@ -50,9 +54,6 @@ def chunked_search(es, index, urls, chunk_size=1000):
 
 # Function to extract all features from a URL
 def extract_features(url_dicts):
-    content_extractor = Content()
-    domain_extractor = Domain()
-    lexical_extractor = Lexical()
     features = []
     for url_dict in url_dicts:
         url = url_dict['url']
@@ -73,33 +74,35 @@ def process_and_upload_batch(url_dicts_batch):
     df = pd.DataFrame(data)
     df.to_csv('features.csv', index=False)
 
-    load_csv_to_es('features.csv', es_client, 'featext')
+    load_csv_to_es('features.csv', es_client, 'featext2')
     return len(url_dicts_batch)
 
 def main():
     es_client = initialize_es_client()
 
-    if not es_client.indices.exists(index="featext"):
-        logging.info(f'Index featext does not exist. Creating index featext')
-        es_client.indices.create(index="featext")
+    if not es_client.indices.exists(index="featext2"):
+        logging.info(f'Index featext2 does not exist. Creating index featext2')
+        es_client.indices.create(index="featext2")
 
     raw_data = get_es_index(es_client, 'raw')
-
+    
     # Get the urls that have not yet been processed along with their type
     unique_urls = {doc['_source']['url'] for doc in raw_data}
     processed_urls = set()
-    for hit in chunked_search(es_client, "featext", list(unique_urls)):
+    for hit in chunked_search(es_client, "featext2", list(unique_urls)):
         processed_urls.add(hit['_source']['url'])
-    unprocessed_url_and_type = [{'url': doc['_source']['url'], 'type': doc['_source']['type']} 
-                        for doc in raw_data if doc['_source']['url'] not in processed_urls]
+    unprocessed_url_and_type = {(doc['_source']['url'], doc['_source']['type']) 
+        for doc in raw_data if doc['_source']['url'] not in processed_urls}
     logging.info(f'Number of unprocessed URLs: {len(unprocessed_url_and_type)}')
 
     batch_size = 1000
     futures = []
     completed_tasks = 0
+    unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type]
+
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        for i in range(0, len(unprocessed_url_and_type), batch_size):
-            batch = unprocessed_url_and_type[i:i+batch_size]
+        for i in range(0, len(unprocessed_url_and_type_list), batch_size):
+            batch = unprocessed_url_and_type_list[i:i+batch_size]
             future = executor.submit(process_and_upload_batch, batch)
             futures.append(future)
 
