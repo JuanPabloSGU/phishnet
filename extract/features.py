@@ -46,7 +46,7 @@ def chunked_search(es, index, urls, chunk_size=1000):
     for i in range(0, len(urls), chunk_size):
         chunk = urls[i:i+chunk_size]
         query = {"query": {"terms": {"url.keyword": chunk}}}
-        yield from es.search(index=index, body=query)['hits']['hits']
+        yield from es.search(index=index, body=query, size=len(chunk))['hits']['hits']
 
 # Function to extract all features from a URL
 def extract_features(url_dicts):
@@ -74,6 +74,7 @@ def process_and_upload_batch(url_dicts_batch):
     df.to_csv('features.csv', index=False)
 
     load_csv_to_es('features.csv', es_client, 'featext')
+    return len(url_dicts_batch)
 
 def main():
     es_client = initialize_es_client()
@@ -91,11 +92,14 @@ def main():
         processed_urls.add(hit['_source']['url'])
     unprocessed_url_and_type = [{'url': doc['_source']['url'], 'type': doc['_source']['type']} 
                         for doc in raw_data if doc['_source']['url'] not in processed_urls]
-    
+    logging.info(f'Number of unprocessed URLs: {len(unprocessed_url_and_type)}')
+
+    batch_size = 1000
     futures = []
+    completed_tasks = 0
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        for i in range(0, len(unprocessed_url_and_type), 1000):
-            batch = unprocessed_url_and_type[i:i+1000]
+        for i in range(0, len(unprocessed_url_and_type), batch_size):
+            batch = unprocessed_url_and_type[i:i+batch_size]
             future = executor.submit(process_and_upload_batch, batch)
             futures.append(future)
 
@@ -103,6 +107,9 @@ def main():
     for future in concurrent.futures.as_completed(futures):
         if future.exception() is not None:
             logging.error(f"Error in thread: {future.exception()}")
+        else:
+            completed_tasks += future.result()
+            logging.info(f'Processed {completed_tasks} out of {len(unprocessed_url_and_type)} URLs')
 
 if __name__ == "__main__":
     main()
