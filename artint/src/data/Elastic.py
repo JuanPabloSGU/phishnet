@@ -8,16 +8,16 @@ class Elastic:
         self.host = os.getenv('ELASTICSEARCH_HOST')
         self.user = os.getenv('ELASTICSEARCH_USER')
         self.password = os.getenv('ELASTICSEARCH_PASSWORD')
-
-        return Elasticsearch(
+        self.connection = Elasticsearch(
             self.host,
             basic_auth=(self.user, self.password),
             timeout=timeout
         )
 
     def search_entire_index(self, index: str) -> dict:
-        return self.search(
-            index,
+        return self.connection.search(
+            http_auth=(self.user, self.password),
+            index=index,
             body={
                 'size': 10000,
                 'query': {
