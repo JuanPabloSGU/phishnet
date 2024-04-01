@@ -230,28 +230,28 @@ class Content:
             response = self.make_request(url, timeout=5, retries=3)
             if response is None:
                 return {}
-            self.feat_dict['redirects'] = self.redirects(response)
+            self.feat_dict['content_redirects'] = self.redirects(response)
         except Exception as e:
             print(f'Error making request: {e}')
             return {}
 
         try:
             soup = BeautifulSoup(response.content, 'html.parser')
-            self.feat_dict['len_html'] = len(soup.prettify())
-            self.feat_dict['len_text'] = len(soup.get_text())
-            self.feat_dict['len_links'] = self.get_links(soup)
-            self.feat_dict['len_mail_usage_forms'] = self.get_mail_usage_form(soup)
-            self.feat_dict['meta_script_link_percentage'] = self.meta_script_link_percentage(soup)
-            self.feat_dict['mouseover_changes'] = self.get_mouseover_changes(soup)
-            self.feat_dict['right_click_disabled'] = self.get_right_click_disabled(soup)
-            self.feat_dict['keyboard_shortcuts_disabled'] = self.get_keyboard_shortcuts_disabled(soup)
-            self.feat_dict['copy_paste_disabled'] = self.get_copy_paste_disabled(soup)
-            self.feat_dict['drag_drop_disabled'] = self.get_drag_drop_disabled(soup)
-            self.feat_dict['popup_window_has_text_field'] = self.popup_window_has_text_field(soup)
-            self.feat_dict['use_iframe'] = self.use_iframe(soup)
-            self.feat_dict['use_upload'] = self.use_upload(soup)
-            self.feat_dict['use_download'] = self.use_download(soup)
-            self.feat_dict['use_http_link'] = self.use_http_link(soup)
+            self.feat_dict['content_len_html'] = len(soup.prettify())
+            self.feat_dict['content_len_text'] = len(soup.get_text())
+            self.feat_dict['content_len_links'] = self.get_links(soup)
+            self.feat_dict['content_len_mail_usage_forms'] = self.get_mail_usage_form(soup)
+            self.feat_dict['content_meta_script_link_percentage'] = self.meta_script_link_percentage(soup)
+            self.feat_dict['content_mouseover_changes'] = self.get_mouseover_changes(soup)
+            self.feat_dict['content_right_click_disabled'] = self.get_right_click_disabled(soup)
+            self.feat_dict['content_keyboard_shortcuts_disabled'] = self.get_keyboard_shortcuts_disabled(soup)
+            self.feat_dict['content_copy_paste_disabled'] = self.get_copy_paste_disabled(soup)
+            self.feat_dict['content_drag_drop_disabled'] = self.get_drag_drop_disabled(soup)
+            self.feat_dict['content_popup_window_has_text_field'] = self.popup_window_has_text_field(soup)
+            self.feat_dict['content_use_iframe'] = self.use_iframe(soup)
+            self.feat_dict['content_use_upload'] = self.use_upload(soup)
+            self.feat_dict['content_use_download'] = self.use_download(soup)
+            self.feat_dict['content_use_http_link'] = self.use_http_link(soup)
 
         except Exception as e:
             print(f'Error parsing HTML: {e}')
