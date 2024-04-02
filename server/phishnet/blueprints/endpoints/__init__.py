@@ -166,7 +166,7 @@ class LogisticalRegression(Resource):
         store_features(features, 'test_feat')
 
         # Step 4 - Send Lexical Features to Triton
-        res = triton_request(features, 'logres')
+        res = triton_request(features, 'logisticalRegression')
 
         return {'message': 'Lexical Features extracted and stored.',
                 'url': url,
