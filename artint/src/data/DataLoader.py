@@ -32,7 +32,7 @@ class DataLoader:
         self.df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
         
         self.cast_astype()
-        self.lex_df = self.extract_lexical()
+        #self.lex_df = self.extract_lexical()
 
     def __len__(self):
         return len(self.df)

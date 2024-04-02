@@ -1,5 +1,3 @@
 .DS_Store
-
+.env
 artint/data/
-artint/src/data/.env
-artint/src/data/.env.example

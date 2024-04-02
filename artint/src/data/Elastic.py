@@ -1,11 +1,11 @@
 import os
 from elasticsearch import Elasticsearch
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 
 class Elastic:
     def __init__(self, timeout: int) -> Elasticsearch:
         
-        #load_dotenv()
+        load_dotenv()
         self.host = os.getenv('ELASTICSEARCH_HOST')
         self.user = os.getenv('ELASTICSEARCH_USER')
         self.password = os.getenv('ELASTICSEARCH_PASSWORD')
