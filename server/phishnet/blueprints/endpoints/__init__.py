@@ -1,7 +1,5 @@
 import json
-import os
 import requests
-import base64
 import numpy as np
 from flask import Blueprint
 from flask_restful import Api, Resource, reqparse
@@ -11,6 +9,7 @@ from phishnet.blueprints.features.Lexical import Lexical
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
+
 
 class HelloWorldResource(Resource):
     @swag_from({
@@ -31,7 +30,9 @@ class HelloWorldResource(Resource):
     def get(self):
         return {'message': 'Hello, World!'}
 
+
 api.add_resource(HelloWorldResource, '/hello_world')
+
 
 class ElasticsearchResource(Resource):
     @swag_from({
@@ -57,6 +58,62 @@ class ElasticsearchResource(Resource):
         return {'message': 'Hello, ElasticSearch!', 'info': es.body}
 
 
+def parse_URL():
+    parser = reqparse.RequestParser()
+    parser.add_argument('url',
+                        type=str,
+                        required=True,
+                        help='URL for method is required.')
+
+    args = parser.parse_args()
+    return args['url']
+
+
+def search_url(url, index):
+    es = elastic.get_elastic()
+    res = es.search(
+        index=index,
+        body={
+            'query': {
+                'term': {
+                    'url.keyword': url
+                }
+            }
+        }
+    )
+    return res
+
+
+def store_features(features, index):
+    es = elastic.get_elastic()
+    es.index(index=index, body=features)
+
+
+def triton_request(features, model_name):
+    data = np.array(list(features.values())[1:]).astype(np.float32).tolist()
+
+    payload = {
+        "inputs": [
+            {
+                "name": "input",
+                "shape": [1, len(data)],
+                "datatype": "FP32",
+                "data": data
+            }
+        ]
+    }
+
+    triton_server_url = "https://triton.capstone.databending.ca"
+    inference_url = f"{triton_server_url}/v2/models/{model_name}/infer"
+
+    res = requests.post(inference_url,
+                        data=json.dumps(payload),
+                        headers={'Content-Type': 'application/json'}
+                        )
+
+    return res
+
+
 class LogisticalRegression(Resource):
     @swag_from({
         'parameters': [
@@ -67,7 +124,7 @@ class LogisticalRegression(Resource):
                 'type': 'string',
                 'required': True
             }
-        ],  
+        ],
         'responses': {
             200: {
                 'description': 'Lexical Features extracted and stored.',
@@ -89,66 +146,33 @@ class LogisticalRegression(Resource):
         }
     })
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('url', type=str, required=True, help='URL to extract lexical features from.')
-        args = parser.parse_args()
+        url = parse_URL()
 
-        url = args['url']
         if url is None:
             return {'message': 'No URL provided.'}
 
-        es = elastic.get_elastic()
-        idx_raw = 'raw'
-        idx_feat = 'test_feat'
-
-        # Run Lexical Feature Extraction
-        # Step 1 - Check if URL exists in Elasticsearch
-        res = es.search(
-            index=idx_raw,
-            body={
-                'query': {
-                    'term': {
-                        'url.keyword': url
-                    }
-                }
-            }
-        )
+        res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
-            return {'message': 'URL found in raw index, skipping feature extraction.'}
+            return {
+                    'message': 'URL already exists in Elasticsearch.',
+                    'url': url
+                    }
 
-        # Step 2 - Extract Lexical Features
         lexical = Lexical()
         lexical.extract(url)
         features = lexical.feat_dict
 
         # Step 3 - Store Lexical Features in Elasticsearch
-        es.index(index=idx_feat, body=features)
+        store_features(features, 'test_feat')
 
-        data = np.array(list(features.values())[1:]).astype(np.float32).tolist()
-
-        payload = {
-            "inputs": [
-                {
-                    "name": "input",
-                    "shape": [1, len(data)],
-                    "datatype": "FP32",
-                    "data": data
-                }
-            ]
-        }
-
-        triton_server_url = "https://triton.capstone.databending.ca"
-        model_name = "logisticalRegression"
-        inference_url = f"{triton_server_url}/v2/models/{model_name}/infer"
-
-        res = requests.post(inference_url, 
-                            data=json.dumps(payload),
-                            headers={'Content-Type': 'application/json'}
-                            )
+        # Step 4 - Send Lexical Features to Triton
+        res = triton_request(features, 'logres')
 
         return {'message': 'Lexical Features extracted and stored.',
                 'url': url,
                 'data': features,
                 'triton': res.json()}
 
+
 api.add_resource(LogisticalRegression, '/logres')
+
