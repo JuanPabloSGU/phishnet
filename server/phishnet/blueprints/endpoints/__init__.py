@@ -114,6 +114,25 @@ def triton_request(features, model_name):
     return res
 
 
+def get_protocol(url):
+    if not url.startswith(('http://', 'https://')):
+        try:
+            res = requests.get('http://' + url, timeout=3)
+            if res.status_code == 200: 
+                return res.url
+        except requests.exceptions.RequestException as e:
+            return None
+
+        try:
+            res = requests.get('https://' + url, timeout=3)
+            if res.status_code == 200:
+                return res.url
+        except requests.exceptions.RequestException as e:
+            return None
+
+    return url
+
+
 class LogisticalRegression(Resource):
     @swag_from({
         'parameters': [
@@ -146,10 +165,10 @@ class LogisticalRegression(Resource):
         }
     })
     def post(self):
-        url = parse_URL()
+        url = get_protocol(parse_URL())
 
         if url is None:
-            return {'message': 'No URL provided.'}
+            return {'message': 'No URL provided or URL is invalid.'}
 
         res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
