@@ -12,7 +12,7 @@ from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from gathering.utils import load_csv_to_es
+from gathering.utils import load_csv_to_es, add_protocol
 
 content_extractor = Content()
 domain_extractor = Domain()
@@ -60,7 +60,9 @@ def get_all_urls(es, index):
 def extract_features(url_dicts):
     features = []
     for url_dict in url_dicts:
-        url = url_dict['url']
+        url = add_protocol(url_dict['url'])
+        if url is None:
+            continue
         type = url_dict['type']
         content_features = content_extractor.extract(url)
         domain_features = domain_extractor.extract(url)
@@ -94,7 +96,7 @@ def main():
         es_client.indices.create(index=DESTINATION_INDEX)
 
     raw_data = get_es_index(es_client, SOURCE_INDEX)
-    
+
     # Get the unique urls from the SOURCE_INDEX
     unique_urls_source = {doc['_source']['url'] for doc in raw_data}
     logging.info(f'Number of unique URLs in the source index: {len(unique_urls_source)}')
@@ -115,7 +117,7 @@ def main():
     with concurrent.futures.ProcessPoolExecutor() as executor:
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
-            batch_index = i // batch_size
+            batch_index = i // batch_size + 1
             future = executor.submit(process_and_upload_batch, batch, DESTINATION_INDEX, batch_index)
             futures.append(future)
 
