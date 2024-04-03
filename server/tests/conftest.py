@@ -31,23 +31,3 @@ def server():
 
     server.terminate()
     server.join()
-
-
-@pytest.fixture(scope='session', autouse=True)
-def elastic():
-    load_dotenv()
-    es = Elasticsearch(
-        os.getenv("ELASTICSEARCH_HOST"),
-        basic_auth=(
-            os.getenv("ELASTICSEARCH_USER"),
-            os.getenv("ELASTICSEARCH_PASSWORD")
-        ),
-        request_timeout=60
-    )
-    
-    es.ping()
-
-    yield 
-
-    es.close()
-    
