@@ -10,7 +10,7 @@ def get_elastic():
                 current_app.config.get('ELASTICSEARCH_USER'),
                 current_app.config.get('ELASTICSEARCH_PASSWORD')
             ),
-            timeout=60
+            request_timeout=60
         )
     return g.elastic
 

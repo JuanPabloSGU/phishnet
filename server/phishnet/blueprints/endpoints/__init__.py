@@ -55,7 +55,10 @@ class ElasticsearchResource(Resource):
     })
     def get(self):
         es = elastic.get_elastic().info(pretty=True)
-        return {'message': 'Hello, ElasticSearch!', 'info': es.body}
+        return {'message': 'Elasticsearch is running.', 'info': es.body}
+
+
+api.add_resource(ElasticsearchResource, '/elastic')
 
 
 def parse_URL():
@@ -133,6 +136,17 @@ def get_protocol(url):
     return url
 
 
+def test_url(url):
+    try:
+        res = requests.get(url, timeout=3)
+        if res.status_code == 200:
+            return True
+    except requests.exceptions.RequestException as e:
+        return False
+
+    return False
+
+
 class LogisticalRegression(Resource):
     @swag_from({
         'parameters': [
@@ -168,7 +182,10 @@ class LogisticalRegression(Resource):
         url = get_protocol(parse_URL())
 
         if url is None:
-            return {'message': 'No URL provided or URL is invalid.'}
+            return {'message': 'URL is invalid.'}
+
+        if not test_url(url):
+            return {'message': 'URL is not accessible.'}
 
         res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
