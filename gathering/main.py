@@ -84,13 +84,19 @@ def main():
         logging.critical('Could not connect to Elasticsearch:', e)
         sys.exit(1)
 
-    # One time use in case the database is cleared and we need to re-import the data
-    # logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
-    # utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
-    # logging.info("Processing malicious URLs for 'openphish.txt'")
-    # fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
-    logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
-    fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
+    BACKUP = os.getenv('BACKUP')
+    if BACKUP == 'True':
+        es_client.indices.create(index='raw')
+
+        # One time use in case the database is cleared and we need to re-import the data
+        logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
+        utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
+
+        logging.info("Processing malicious URLs for 'openphish.txt'")
+        fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
+
+        logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
+        fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
 
     logging.info('Processing malicious URLs for f{OPENFISH_URL}') 
     fetch_and_index_urls(es_client, OPENFISH_URL, 'raw', False, 1, True)
