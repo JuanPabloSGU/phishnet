@@ -5,7 +5,6 @@ import sys
 import utils
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from requests.exceptions import RequestException
 
 def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
     if is_url:
@@ -98,7 +97,6 @@ def main():
 
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
     fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
-
 
     logging.info('Completed all tasks.') 
 
