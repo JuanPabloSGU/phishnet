@@ -66,7 +66,6 @@ def extract_features(url_dicts):
         except RequestException:
             logging.error("Error adding protocol to URL: %s", url_dict['url'])
             continue
-        logging.info("Added protocol to URL: %s", url)
         type = url_dict['type']
         content_features = content_extractor.extract(url)
         domain_features = domain_extractor.extract(url)

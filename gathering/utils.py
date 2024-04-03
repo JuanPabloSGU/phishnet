@@ -32,5 +32,6 @@ def add_protocol(url):
         for protocol in ['http://', 'https://']:
             res = requests.get(protocol + url, timeout=1)
             if res.status_code == 200:
+                logging.info("Added protocol to URL: %s", url)
                 return res.url
     return url
