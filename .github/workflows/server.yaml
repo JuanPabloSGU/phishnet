@@ -35,9 +35,9 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Create '.env' file
         run: |
-          echo ELASTICSEARCH_HOST=${{ secrets.ELASTICSEARCH_HOST }} >> server/phishnet/.env
-          echo ELASTICSEARCH_USER=${{ secrets.ELASTICSEARCH_USER }} >> server/phishnet/.env
-          echo ELASTICSEARCH_PASS=${{ secrets.ELASTICSEARCH_PASS }} >> server/phishnet/.env
+          echo ELASTICSEARCH_HOST=${{ secrets.ELASTICSEARCH_HOST }} >> server/.env
+          echo ELASTICSEARCH_USER=${{ secrets.ELASTICSEARCH_USER }} >> server/.env
+          echo ELASTICSEARCH_PASSWORD=${{ secrets.ELASTICSEARCH_PASSWORD }} >> server/.env
       - name: Run tests
         run: |
           coverage run -m pytest server/tests/
