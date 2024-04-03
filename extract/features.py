@@ -13,9 +13,10 @@ from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from gathering.utils import load_csv_to_es, add_protocol
+from requests.exceptions import RequestException
 
-# content_extractor = Content()
-# domain_extractor = Domain()
+content_extractor = Content()
+domain_extractor = Domain()
 lexical_extractor = Lexical()
 
 def initialize_es_client():
@@ -60,13 +61,17 @@ def get_all_urls(es, index):
 def extract_features(url_dicts):
     features = []
     for url_dict in url_dicts:
-        url = add_protocol(url_dict['url'])
+        try:
+            url = add_protocol(url_dict['url'])
+        except RequestException:
+            logging.error("Error adding protocol to URL: %s", url_dict['url'])
+            continue
+        logging.info("Added protocol to URL: %s", url)
         type = url_dict['type']
-        # content_features = content_extractor.extract(url)
-        # domain_features = domain_extractor.extract(url)
+        content_features = content_extractor.extract(url)
+        domain_features = domain_extractor.extract(url)
         lexical_features = lexical_extractor.extract(url)
-        features.append({'url': url, 'type': type, **lexical_features})
-        # features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
+        features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
     return features
 
 def process_and_upload_batch(url_dicts_batch, index, batch_number):
