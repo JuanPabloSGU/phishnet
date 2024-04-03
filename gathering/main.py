@@ -88,8 +88,10 @@ def main():
     fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
 
     # One time use in case the database is cleared and we need to re-import the data
-    # logging.info('Processing malicious URLs for backup.txt')
-    # fetch_and_index_urls(es_client, 'backup.txt', 'raw', False, 1, False)
+    # logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
+    # load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
+    # logging.info("Processing malicious URLs for 'openphish.txt'")
+    # fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
 
     logging.info('Completed all tasks.') 
 
