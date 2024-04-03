@@ -26,3 +26,14 @@ def download_from_url(url, stream):
         logging.critical(f"Failed to download file from {url}")
 
     return response
+
+def add_protocol(url):
+    if not url.startswith(('http://', 'https://')):
+        for protocol in ['http://', 'https://']:
+            try:
+                res = requests.get(protocol + url, timeout=2)
+                if res.status_code == 200:
+                    return res.url
+            except requests.exceptions.RequestException:
+                continue
+    return url
