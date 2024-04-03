@@ -30,8 +30,14 @@ def download_from_url(url, stream):
 def add_protocol(url):
     if not url.startswith(('http://', 'https://')):
         for protocol in ['http://', 'https://']:
-            res = requests.get(protocol + url, timeout=1)
-            if res.status_code == 200:
-                logging.info("Added protocol to URL: %s", url)
-                return res.url
+            try:
+                res = requests.get(protocol + url, timeout=1)
+                if res.status_code == 200:
+                    logging.info("Added protocol to URL: %s", url)
+                    return res.url
+                else:
+                    return None
+            except Exception as e:
+                logging.error("Error adding protocol to URL: %s", str(e))
+                return None
     return url

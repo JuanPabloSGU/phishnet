@@ -13,7 +13,6 @@ from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from gathering.utils import load_csv_to_es, add_protocol
-from requests.exceptions import RequestException
 
 content_extractor = Content()
 domain_extractor = Domain()
@@ -61,10 +60,8 @@ def get_all_urls(es, index):
 def extract_features(url_dicts):
     features = []
     for url_dict in url_dicts:
-        try:
-            url = add_protocol(url_dict['url'])
-        except RequestException:
-            logging.error("Error adding protocol to URL: %s", url_dict['url'])
+        url = add_protocol(url_dict['url'])
+        if url is None:
             continue
         type = url_dict['type']
         content_features = content_extractor.extract(url)
