@@ -121,16 +121,16 @@ def get_protocol(url):
     if not url.startswith(('http://', 'https://')):
         try:
             res = requests.get('http://' + url, timeout=3)
-            if res.status_code == 200: 
+            if res.status_code == 200:
                 return res.url
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             return None
 
         try:
             res = requests.get('https://' + url, timeout=3)
             if res.status_code == 200:
                 return res.url
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             return None
 
     return url
@@ -141,7 +141,7 @@ def test_url(url):
         res = requests.get(url, timeout=3)
         if res.status_code == 200:
             return True
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         return False
 
     return False
@@ -211,4 +211,3 @@ class LogisticalRegression(Resource):
 
 
 api.add_resource(LogisticalRegression, '/logres')
-
