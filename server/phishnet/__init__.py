@@ -14,6 +14,9 @@ def create_app():
 
     return app
 
-if __name__ == '__main__':
+def start_server():
     app = create_app()
     app.run()
+
+if __name__ == '__main__':
+    start_server()
