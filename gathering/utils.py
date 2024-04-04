@@ -10,6 +10,7 @@ try:
 except OverflowError:
     csv.field_size_limit(2**31 - 1)
 
+
 def load_csv_to_es(file_name, es_client, data_index):
     logging.info(f"Loading {file_name} into Elasticsearch")
     with open(file_name, 'r') as f:
@@ -27,6 +28,7 @@ def download_from_url(url, stream):
 
     return response
 
+  
 def add_protocol(url):
     if not url.startswith(('http://', 'https://')):
         for protocol in ['http://', 'https://']:

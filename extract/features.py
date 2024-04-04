@@ -45,6 +45,7 @@ def get_es_index(es, index):
     logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
     return all_data
 
+
 def get_all_urls(es, index):
     logging.info('Getting all urls from Elasticsearch index: %s', index)
     query = {"_source": ["url"], "query": {"match_all": {}}}
@@ -55,6 +56,7 @@ def get_all_urls(es, index):
         all_urls += [hit['_source']['url'] for hit in response['hits']['hits']]
     logging.info('Retrieved %d urls from Elasticsearch index: %s', len(all_urls), index)
     return set(all_urls)
+  
 
 # Function to extract all features from a URL
 def extract_features(url_dicts):
@@ -69,6 +71,7 @@ def extract_features(url_dicts):
         lexical_features = lexical_extractor.extract(url)
         features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
     return features
+
 
 def process_and_upload_batch(url_dicts_batch, index, batch_number):
     es_client = initialize_es_client()
@@ -117,14 +120,18 @@ def main():
     with concurrent.futures.ProcessPoolExecutor() as executor:
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
+
+            future = executor.submit(process_and_upload_batch, batch)
+
             batch_index = i // batch_size + 1
             future = executor.submit(process_and_upload_batch, batch, DESTINATION_INDEX, batch_index)
+
             futures.append(future)
 
     # Wait for all processes to complete
     for future in concurrent.futures.as_completed(futures):
         if future.exception() is not None:
             logging.error(f"Error in thread: {future.exception()}")
-        
+
 if __name__ == "__main__":
     main()
