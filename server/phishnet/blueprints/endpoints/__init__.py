@@ -123,6 +123,8 @@ def get_protocol(url):
             res = requests.get('http://' + url, timeout=3)
             if res.status_code == 200:
                 return res.url
+            else:
+                return None
         except requests.exceptions.RequestException:
             return None
 
