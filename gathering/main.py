@@ -92,6 +92,9 @@ def main():
         logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
         utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
 
+        logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
+        fetch_and_index_urls(es_client, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False)
+
         logging.info("Processing malicious URLs for 'openphish.txt'")
         fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
 
@@ -103,7 +106,7 @@ def main():
 
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
     fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
-
+        
     logging.info('Completed all tasks.') 
 
 if __name__ == '__main__':
