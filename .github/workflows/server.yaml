@@ -1,10 +1,8 @@
 name: Server CI
 
 on:
-  push:
-    branches: ["main", "server"]
   pull_request:
-    branches: ["main", "server"]
+    branches: ["main"]
 
 permissions:
   contents: read
