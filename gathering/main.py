@@ -6,6 +6,7 @@ import utils
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 
+
 def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
     if is_url:
         logging.info(f'Downloading data from {source}')
@@ -54,6 +55,7 @@ def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
 
     logging.info(f'Loading data into Elasticsearch')
     utils.load_csv_to_es(f'{index}.csv', es_client, index)
+
 
     logging.info(f'Completed loading {index} into Elasticsearch')
 
