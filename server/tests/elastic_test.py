@@ -25,9 +25,3 @@ def test_hello_world(client):
     response = client.get("/api/v1/hello_world")
 
     assert response.json["message"] == "Hello, World!"
-    response = client.get("/api/v1/hello_world")
-
-    assert response.json["message"] == "Hello, World!"
-    response = client.get("/api/v1/hello_world")
-
-    assert response.json["message"] == "Hello, World!"
