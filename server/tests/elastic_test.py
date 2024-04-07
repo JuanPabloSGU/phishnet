@@ -1,13 +1,14 @@
+from utils import generate_jwt
 import os
-import sys 
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from phishnet import elastic
 
 
 def test_get_elastic(client):
-    response = client.get("/api/v1/elastic")
+    response = client.get("/api/v1/elastic", headers=generate_jwt(client))
+
 
     assert response.json["message"] == "Elasticsearch is running."
 
@@ -22,5 +23,11 @@ def test_close_elastic(app):
 
 def test_hello_world(client):
     response = client.get("/api/v1/hello_world")
-    
+
+    assert response.json["message"] == "Hello, World!"
+    response = client.get("/api/v1/hello_world")
+
+    assert response.json["message"] == "Hello, World!"
+    response = client.get("/api/v1/hello_world")
+
     assert response.json["message"] == "Hello, World!"
