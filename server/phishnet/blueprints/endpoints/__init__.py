@@ -93,13 +93,13 @@ def store_features(features, index):
     es.index(index=index, body=features)
 
 
-def triton_request(features, model_name):
+def triton_request(features, model_name, input):
     data = np.array(list(features.values())[1:]).astype(np.float32).tolist()
 
     payload = {
         "inputs": [
             {
-                "name": "input",
+                "name": input,
                 "shape": [1, len(data)],
                 "datatype": "FP32",
                 "data": data
@@ -202,9 +202,9 @@ class LogisticalRegression(Resource):
         res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
             return {
-                    'message': 'URL already exists in Elasticsearch.',
-                    'url': url
-                    }
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
 
         lexical = Lexical()
         lexical.extract(url)
@@ -214,7 +214,7 @@ class LogisticalRegression(Resource):
         store_features(features, 'test_feat')
 
         # Step 4 - Send Lexical Features to Triton
-        res = triton_request(features, 'logisticalRegression')
+        res = triton_request(features, 'logisticalRegression', 'input')
 
         return {'message': 'Lexical Features extracted and stored.',
                 'url': url,
@@ -223,3 +223,135 @@ class LogisticalRegression(Resource):
 
 
 api.add_resource(LogisticalRegression, '/logres')
+
+
+class RandomForest(Resource):
+    @swag_from({
+        'parameters': [
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self):
+        url = get_protocol(parse_URL())
+
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        if not test_url(url):
+            return {'message': 'URL is not accessible.'}
+
+        res = search_url(url, 'raw')
+        if res['hits']['total']['value'] > 0:
+            return {
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
+
+        lexical = Lexical()
+        lexical.extract(url)
+        features = lexical.feat_dict
+
+        # Step 3 - Store Lexical Features in Elasticsearch
+        store_features(features, 'test_feat')
+
+        # Step 4 - Send Lexical Features to Triton
+        res = triton_request(features, 'randomForest', 'input__0')
+
+        return {'message': 'Lexical Features extracted and stored.',
+                'url': url,
+                'data': features,
+                'triton': res.json()}
+
+
+api.add_resource(RandomForest, '/randforest')
+
+
+class MLPResource(Resource):
+    @swag_from({
+        'parameters': [
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self):
+        url = get_protocol(parse_URL())
+
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        if not test_url(url):
+            return {'message': 'URL is not accessible.'}
+
+        res = search_url(url, 'raw')
+        if res['hits']['total']['value'] > 0:
+            return {
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
+
+        lexical = Lexical()
+        lexical.extract(url)
+        features = lexical.feat_dict
+
+        # Step 3 - Store Lexical Features in Elasticsearch
+        store_features(features, 'test_feat')
+
+        # Step 4 - Send Lexical Features to Triton
+        res = triton_request(features, 'MLP', 'input')
+
+        return {'message': 'Lexical Features extracted and stored.',
+                'url': url,
+                'data': features,
+                'triton': res.json()}
+
+
+api.add_resource(MLPResource, '/mlp')

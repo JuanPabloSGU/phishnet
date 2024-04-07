@@ -3,8 +3,8 @@ def test_no_url_provided(client):
         'Content-Type': 'application/json',
     }
     response = client.post("/api/v1/logres", json=data)
-    
-    assert response.json["message"] == { "url": "URL for method is required." }
+
+    assert response.json["message"] == {"url": "URL for method is required."}
 
 
 def test_invalid_url(client):
@@ -13,9 +13,8 @@ def test_invalid_url(client):
         'url': 'blahblahblah'
     }
     response = client.post("/api/v1/logres", json=data)
-    
     assert response.json["message"] == "URL is invalid."
-    
+
 
 def test_not_accessible_url(client):
     data = {
@@ -61,7 +60,7 @@ def test_get_protocol_http(client):
     assert response.json["url"] == "http://example.com/"
 
 
-def test_triton(client):
+def test_triton_logisticregression(client):
     data = {
         'Content-Type': 'application/json',
         'url': 'http://example.com',
