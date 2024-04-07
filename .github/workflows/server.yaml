@@ -36,6 +36,7 @@ jobs:
           echo ELASTICSEARCH_HOST=${{ secrets.ELASTICSEARCH_HOST }} >> server/.env
           echo ELASTICSEARCH_USER=${{ secrets.ELASTICSEARCH_USER }} >> server/.env
           echo ELASTICSEARCH_PASSWORD=${{ secrets.ELASTICSEARCH_PASSWORD }} >> server/.env
+          echo JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} >> server/.env
       - name: Run tests
         run: |
           coverage run -m pytest server/tests/
