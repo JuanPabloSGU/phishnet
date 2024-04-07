@@ -194,9 +194,9 @@ class LogisticalRegression(Resource):
         res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
             return {
-                    'message': 'URL already exists in Elasticsearch.',
-                    'url': url
-                    }
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
 
         lexical = Lexical()
         lexical.extract(url)
@@ -260,9 +260,9 @@ class RandomForest(Resource):
         res = search_url(url, 'raw')
         if res['hits']['total']['value'] > 0:
             return {
-                    'message': 'URL already exists in Elasticsearch.',
-                    'url': url
-                    }
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
 
         lexical = Lexical()
         lexical.extract(url)
@@ -281,3 +281,69 @@ class RandomForest(Resource):
 
 
 api.add_resource(RandomForest, '/randforest')
+
+
+class MLPResource(Resource):
+    @swag_from({
+        'parameters': [
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self):
+        url = get_protocol(parse_URL())
+
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        if not test_url(url):
+            return {'message': 'URL is not accessible.'}
+
+        res = search_url(url, 'raw')
+        if res['hits']['total']['value'] > 0:
+            return {
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
+
+        lexical = Lexical()
+        lexical.extract(url)
+        features = lexical.feat_dict
+
+        # Step 3 - Store Lexical Features in Elasticsearch
+        store_features(features, 'test_feat')
+
+        # Step 4 - Send Lexical Features to Triton
+        res = triton_request(features, 'MLP', 'input')
+
+        return {'message': 'Lexical Features extracted and stored.',
+                'url': url,
+                'data': features,
+                'triton': res.json()}
+
+
+api.add_resource(MLPResource, '/mlp')
