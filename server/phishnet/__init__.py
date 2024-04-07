@@ -2,6 +2,7 @@ from flask import Flask
 from flask_restful import Api
 from flasgger import Swagger
 from .blueprints.endpoints import blueprint as endpoints
+from flask_cors import CORS
 
 
 def create_app():
@@ -14,9 +15,11 @@ def create_app():
 
     return app
 
+
 def start_server():
     app = create_app()
     app.run()
+
 
 if __name__ == '__main__':
     start_server()
