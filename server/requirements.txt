@@ -1,5 +1,4 @@
 aniso8601==9.0.1
-asarPy==1.0.1
 attrs==23.2.0
 beautifulsoup4==4.12.3
 blinker==1.7.0
@@ -11,6 +10,7 @@ elastic-transport==8.12.0
 elasticsearch==8.12.1
 flasgger==0.9.7.1
 Flask==3.0.2
+Flask-Cors==4.0.0
 Flask-RESTful==0.3.10
 flask-restplus==0.13.0
 idna==3.6
