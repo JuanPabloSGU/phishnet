@@ -6,7 +6,8 @@ import { InferenceResult } from "./InferenceResult";
 
 type Triton = {
     url: string;
-    value: Number;
+    model: string;
+    value: Array<Number>;
     message: string;
 };
 
@@ -20,7 +21,8 @@ const models = [
 export function Inference() {
     const [url, setUrl] = useState('');
     const [model, setModel] = useState('/logres');
-    const [resultStream, setResultStream] = useState<Triton>()
+    const [resultStream, setResultStream] = useState<Triton>();
+    const [invalidURL, isInvalidURL] = useState('');
 
     const handleInferece = () => {
         if (url === '') {
@@ -45,11 +47,13 @@ export function Inference() {
 
                 var data = {
                     url: response.data["url"],
+                    model: models.find(item => item.value === model)?.label || '',
                     value: result,
                     message: msg
                 }
 
                 setResultStream(data)
+                isInvalidURL('')
 
                 var previous_urls = localStorage.getItem('urls');
                 if (previous_urls === null) {
@@ -66,11 +70,12 @@ export function Inference() {
             })
             .catch(function(error) {
                 console.log(error)
+                isInvalidURL('URL is invalid')
             })
     };
 
     return (
-        <Container>
+        <Container className={classes.container}>
             <Title>
                 Scan
             </Title>
@@ -83,6 +88,7 @@ export function Inference() {
                 <div className={classes.control}>
                     <div className={classes.input}>
                         <TextInput className={classes.box}
+                            error={invalidURL}
                             placeholder="Enter a URL, e.g. https://example.com"
                             value={url}
                             onChange={(event) => setUrl(event.currentTarget.value)}

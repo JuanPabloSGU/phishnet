@@ -3,14 +3,17 @@ import classes from './InferenceResult.module.css'
 
 
 type Triton = {
-    url: string;
-    value: Number;
+    props: {
+        url: string;
+        value: Array<Number>;
+        message: string;
+    }
 };
 
 export function InferenceResult(props: Triton) {
     const theme = useMantineTheme();
     var url = props.props.url;
-    var value = props.props.value[0];
+    var value = Number(props.props.value[0]);
     var message = props.props.message;
 
     return (
@@ -32,7 +35,7 @@ export function InferenceResult(props: Triton) {
                         <RingProgress
                             roundCaps
                             thickness={6}
-                            size={150}
+                            size={200}
                             sections={[{ value: (value) * 100, color: theme.primaryColor }]}
                             label={
                                 <div>

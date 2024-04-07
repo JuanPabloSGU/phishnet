@@ -2,6 +2,7 @@ import '@mantine/core/styles.css'
 import { HeaderSimple } from './components/HeaderSimple'
 import { FeaturesTitle } from './components/FeaturesTitle'
 import { Inference } from './components/Inference'
+import { PreviousSearches } from './components/PreviousSearches'
 
 function App() {
 
@@ -10,6 +11,7 @@ function App() {
             <HeaderSimple />
             <FeaturesTitle />
             <Inference />
+            <PreviousSearches />
         </>
     )
 }

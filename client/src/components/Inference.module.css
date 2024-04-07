@@ -11,3 +11,7 @@
     flex-grow: 1;
     padding-right: var(--mantine-spacing-sm);
 }
+
+.container {
+    padding-bottom: var(--mantine-spacing-md);
+}
