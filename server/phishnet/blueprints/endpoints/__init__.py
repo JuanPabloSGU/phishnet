@@ -258,7 +258,13 @@ class RandomForest(Resource):
     })
     def post(self):
         url = get_protocol(parse_URL())
-
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Invalid Authorization.'}
         if url is None:
             return {'message': 'URL is invalid.'}
 
@@ -325,6 +331,13 @@ class MLPResource(Resource):
     def post(self):
         url = get_protocol(parse_URL())
 
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Invalid Authorization.'}
         if url is None:
             return {'message': 'URL is invalid.'}
 
