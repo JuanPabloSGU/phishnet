@@ -6,9 +6,11 @@ from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
+from flask_cors import CORS
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
+CORS(blueprint)
 
 
 class HelloWorldResource(Resource):
