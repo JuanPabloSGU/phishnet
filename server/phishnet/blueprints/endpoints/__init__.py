@@ -1,7 +1,8 @@
 import json
+import os
 import requests
 import numpy as np
-from flask import Blueprint
+from flask import Blueprint, request
 from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
@@ -180,11 +181,18 @@ class LogisticalRegression(Resource):
                     }
                 }
             }
-        }
+        },
     })
     def post(self):
         url = get_protocol(parse_URL())
 
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Invalid Authorization.'}
         if url is None:
             return {'message': 'URL is invalid.'}
 
