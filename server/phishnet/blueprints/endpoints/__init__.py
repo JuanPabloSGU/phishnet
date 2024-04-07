@@ -7,10 +7,11 @@ from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
 from flask_jwt_extended import create_access_token, jwt_required
-
+from flask_cors import CORS
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
+CORS(blueprint)
 
 
 class LoginResource(Resource):
