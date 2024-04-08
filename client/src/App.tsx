@@ -3,6 +3,7 @@ import { HeaderSimple } from './components/HeaderSimple'
 import { FeaturesTitle } from './components/FeaturesTitle'
 import { Inference } from './components/Inference'
 import { PreviousSearches } from './components/PreviousSearches'
+import { FooterSimple } from './components/FooterSimple'
 
 function App() {
 
@@ -12,6 +13,7 @@ function App() {
             <FeaturesTitle />
             <Inference />
             <PreviousSearches />
+            <FooterSimple />
         </>
     )
 }
