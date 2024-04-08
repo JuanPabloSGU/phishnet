@@ -31,8 +31,17 @@ export function Inference() {
 
         var target = 'http://localhost:5000/api/v1' + model
 
-        axios.post(target, {
-            url: url
+        var token = localStorage.getItem('jwt')
+
+        axios({
+            method: 'post',
+            url: target,
+            data: {
+                url: url
+            },
+            headers: {
+                Authorization: 'Bearer ' + token
+            }
         })
             .then(function(response) {
                 var result = response.data["triton"]["outputs"][0]["data"]

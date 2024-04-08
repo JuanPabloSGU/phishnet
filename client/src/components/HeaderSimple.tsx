@@ -4,8 +4,10 @@ import classes from './HeaderSimple.module.css';
 import { Link } from 'react-router-dom';
 
 const links = [
+    { link: '/', label: 'Home' },
     { link: '/about', label: 'About' },
     { link: '/contact', label: 'Contact' },
+    { link: '/login', label: 'Login' }
 ];
 
 export function HeaderSimple() {
