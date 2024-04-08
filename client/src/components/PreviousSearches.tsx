@@ -41,7 +41,7 @@ export function PreviousSearches() {
             </Title>
 
             <Text c='dimmed'>
-                Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
+                Track your scanning history and results for peace of mind:
             </Text>
 
             <Table.ScrollContainer minWidth={800}>

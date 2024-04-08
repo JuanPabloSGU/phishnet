@@ -54,7 +54,7 @@ export function Authentication() {
                 </Title>
 
                 <Text c="dimmed" size="sm" ta="center" mt={5} mb={30}>
-                    Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
+                    Enter your credentials to access your account. 
                 </Text>
 
                 <TextInput

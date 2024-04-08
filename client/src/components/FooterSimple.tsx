@@ -1,24 +1,22 @@
-import { Container, Group, Anchor } from '@mantine/core';
+import { Container, Group } from '@mantine/core';
+import { Link } from 'react-router-dom';
 import classes from './FooterSimple.module.css';
 
 const links = [
-    { link: '#', label: 'Contact' },
-    { link: '#', label: 'Privacy' },
-    { link: '#', label: 'Blog' },
-    { link: '#', label: 'Careers' },
+    { link: '/about', label: 'About' },
+    { link: '/contact', label: 'Contact' },
+    { link: '/login', label: 'Login' },
 ];
 
 export function FooterSimple() {
     const items = links.map((link) => (
-        <Anchor<'a'>
-            c="dimmed"
+        <Link
+            className={`dimmed ${classes.links}`}
             key={link.label}
-            href={link.link}
-            onClick={(event) => event.preventDefault()}
-            size="sm"
+            to={link.link}
         >
             {link.label}
-        </Anchor>
+        </Link>
     ));
 
     return (

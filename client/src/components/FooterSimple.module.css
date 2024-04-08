@@ -16,6 +16,9 @@
 }
 
 .links {
+  color: inherit;
+  text-decoration: none;
+  
   @media (max-width: $mantine-breakpoint-xs) {
     margin-top: var(--mantine-spacing-md);
   }

@@ -90,7 +90,7 @@ export function Inference() {
             </Title>
 
             <Text c='dimmed'>
-                Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
+                Our advanced scanning tool employs machine learning to analyze URLs and distinguish between legitimate websites and potential phishing threats. Enter a URL below to instantly assess its authenticity:
             </Text>
 
             <Paper>
