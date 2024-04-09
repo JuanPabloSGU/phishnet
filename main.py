@@ -1,3 +1,7 @@
+'''
+This file is currently NOT in use
+'''
+
 import csv
 import os
 import requests

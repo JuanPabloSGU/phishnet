@@ -14,17 +14,21 @@ from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from gathering.utils import load_csv_to_es, add_protocol
 
+# Initialize feature extractors
 content_extractor = Content()
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
+# Function to initialize Elasticsearch client
 def initialize_es_client():
+    # Load environment variables from .env file
     logging.info('Loading environment variables')
     load_dotenv('.env')
     ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
     ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
     ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
 
+    # Connect to Elasticsearch
     logging.info('Connecting to Elasticsearch')
     es_client = Elasticsearch(
         ELASTICSEARCH_HOST,
@@ -46,6 +50,7 @@ def get_es_index(es, index):
     return all_data
 
 
+# Function to get all URLs from an Elasticsearch index
 def get_all_urls(es, index):
     logging.info('Getting all urls from Elasticsearch index: %s', index)
     query = {"_source": ["url"], "query": {"match_all": {}}}
@@ -73,6 +78,7 @@ def extract_features(url_dicts):
     return features
 
 
+# Function to process a batch of URLs and upload the extracted features to Elasticsearch
 def process_and_upload_batch(url_dicts_batch, index, batch_number):
     es_client = initialize_es_client()
 
@@ -94,6 +100,7 @@ def main():
     SOURCE_INDEX = os.getenv('SOURCE_INDEX')
     DESTINATION_INDEX = os.getenv('DESTINATION_INDEX')
 
+    # Create the destination index if it does not exist
     if not es_client.indices.exists(index=DESTINATION_INDEX):
         logging.info(f'Index {DESTINATION_INDEX} does not exist. Creating index {DESTINATION_INDEX}')
         es_client.indices.create(index=DESTINATION_INDEX)
@@ -117,6 +124,7 @@ def main():
     futures = []
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
+    # Process the unprocessed URLs in batches
     with concurrent.futures.ProcessPoolExecutor() as executor:
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
