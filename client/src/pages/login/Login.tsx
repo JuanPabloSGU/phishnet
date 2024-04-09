@@ -1,19 +1,19 @@
 import '@mantine/core/styles.css'
+import { Authentication } from './components/Authentication'
 import { HeaderSimple } from '../../components/HeaderSimple'
-import { FooterSimple } from '../../components/FooterSimple'
 import { Container } from '@mantine/core'
-import { TeamTable } from './components/TeamTable'
+import { FooterSimple } from '../../components/FooterSimple'
 
-function Contact() {
+function Login() {
     return (
         <>
             <HeaderSimple />
             <Container>
-                <TeamTable />
+                <Authentication />
             </Container>
             <FooterSimple />
         </>
     )
 }
 
-export default Contact
+export default Login

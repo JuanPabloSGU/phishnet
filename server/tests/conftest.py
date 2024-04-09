@@ -1,19 +1,18 @@
-import os
-import pytest
-import sys
-from multiprocessing import Process
-from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
+from multiprocessing import Process
+import sys
+import pytest
+import os
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from phishnet import create_app, start_server
 
 
 @pytest.fixture
 def app():
     app = create_app()
-    
     yield app
 
 

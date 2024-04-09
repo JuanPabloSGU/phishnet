@@ -31,8 +31,17 @@ export function Inference() {
 
         var target = 'http://localhost:5000/api/v1' + model
 
-        axios.post(target, {
-            url: url
+        var token = localStorage.getItem('jwt')
+
+        axios({
+            method: 'post',
+            url: target,
+            data: {
+                url: url
+            },
+            headers: {
+                Authorization: 'Bearer ' + token
+            }
         })
             .then(function(response) {
                 var result = response.data["triton"]["outputs"][0]["data"]
@@ -81,7 +90,7 @@ export function Inference() {
             </Title>
 
             <Text c='dimmed'>
-                Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
+                Our advanced scanning tool employs machine learning to analyze URLs and distinguish between legitimate websites and potential phishing threats. Enter a URL below to instantly assess its authenticity:
             </Text>
 
             <Paper>

@@ -6,6 +6,7 @@ from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
+from flask_jwt_extended import create_access_token, jwt_required
 from flask_cors import CORS
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -13,8 +14,46 @@ api = Api(blueprint)
 CORS(blueprint)
 
 
+class LoginResource(Resource):
+    @ swag_from({
+        'responses': {
+            200: {
+                'description': 'Hello, World!',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'access_token': {
+                            'type': 'string'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('username', type=str,
+                            required=True, help='Username is required')
+        parser.add_argument('password', type=str,
+                            required=True, help='Password is required')
+
+        args = parser.parse_args()
+        username = args['username']
+        # password = args['password']
+
+        access_token = create_access_token(identity=username)
+        return {'message': 'Succesful login!',
+                'access_token': access_token}
+
+
+api.add_resource(LoginResource, '/login')
+
+
 class HelloWorldResource(Resource):
-    @swag_from({
+    @ swag_from({
         'responses': {
             200: {
                 'description': 'Hello, World!',
@@ -37,7 +76,7 @@ api.add_resource(HelloWorldResource, '/hello_world')
 
 
 class ElasticsearchResource(Resource):
-    @swag_from({
+    @ swag_from({
         'responses': {
             200: {
                 'description': 'Hello, ElasticSearch!',
@@ -55,6 +94,7 @@ class ElasticsearchResource(Resource):
             }
         }
     })
+    @jwt_required(locations=["headers"])
     def get(self):
         es = elastic.get_elastic().info(pretty=True)
         return {'message': 'Elasticsearch is running.', 'info': es.body}
@@ -154,7 +194,7 @@ def test_url(url):
 
 
 class LogisticalRegression(Resource):
-    @swag_from({
+    @ swag_from({
         'parameters': [
             {
                 'name': 'url',
@@ -182,8 +222,9 @@ class LogisticalRegression(Resource):
                     }
                 }
             }
-        }
+        },
     })
+    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 
@@ -220,7 +261,7 @@ api.add_resource(LogisticalRegression, '/logres')
 
 
 class RandomForest(Resource):
-    @swag_from({
+    @ swag_from({
         'parameters': [
             {
                 'name': 'url',
@@ -250,6 +291,7 @@ class RandomForest(Resource):
             }
         }
     })
+    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 
@@ -286,7 +328,7 @@ api.add_resource(RandomForest, '/randforest')
 
 
 class MLPResource(Resource):
-    @swag_from({
+    @ swag_from({
         'parameters': [
             {
                 'name': 'url',
@@ -316,6 +358,7 @@ class MLPResource(Resource):
             }
         }
     })
+    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 

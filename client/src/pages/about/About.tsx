@@ -1,9 +1,18 @@
 import '@mantine/core/styles.css'
+import { HeaderSimple } from '../../components/HeaderSimple'
+import { FooterSimple } from '../../components/FooterSimple'
+import { Container } from '@mantine/core'
+import { FeaturesGrid } from './components/FeaturesGrid'
 
 function About() {
     return (
         <>
-            Hello World!
+            <HeaderSimple />
+            <Container>
+                <FeaturesGrid />
+            </Container>
+
+            <FooterSimple />
         </>
     )
 }
