@@ -43,7 +43,7 @@ class Lexical:
 
 
     @staticmethod
-    def component_ratio(one, two):
+    def component_ratio(one, two): # helper method for computing the ratio between 2 components (either int or str); e.g., ratio between netloc and url. 
         p = len(one) if type(one) is str else one
         q = len(two) if type(two) is str else two
 
@@ -53,11 +53,11 @@ class Lexical:
 
     @staticmethod
     def count_digits(_str: str):
-        return sum(c.isdigit() for c in _str)
+        return sum(c.isdigit() for c in _str) # count number of digits in string
 
     @staticmethod
-    def count_letters(_str: str):
-        return sum(c.isalpha() for c in _str)
+    def count_letters(_str: str): 
+        return sum(c.isalpha() for c in _str) # count number of alphanumeric characters in string
     
     @staticmethod
     def uses_https(scheme: str):

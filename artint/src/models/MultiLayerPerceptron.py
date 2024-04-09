@@ -23,7 +23,7 @@ class MLP(nn.Module):
         for i in range(1, len(hidden_layers)):
             self.layers.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
             self.layers.append(activation_fn())
-            self.layers.append(nn.Dropout(dropout_rate))
+            self.layers.append(nn.Dropout(dropout_rate)) # dropout layer to avoid overfitting
 
         # Output layer
         self.layers.append(nn.Linear(hidden_layers[-1], output_size))

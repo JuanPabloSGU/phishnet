@@ -1,8 +1,9 @@
 import numpy as np
 import torch.nn as nn
-from sklearn.linear_model import LogisticRegression
 
 class LogisticRegressionBase:
+
+    # define hyperparams and store data
     def __init__(self, X_train, Y_train, X_test, Y_test, num_epochs=2000, learning_rate=0.005) -> None:
         self.X_train = X_train
         self.Y_train = Y_train
@@ -11,9 +12,11 @@ class LogisticRegressionBase:
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
 
+    # activation fxn 
     def activation(self, x):
         return 1 / (1 + np.exp(-x)) # sigmoid
     
+    # cost fxn
     def cost(self, A, Y, n):
         return (- 1 / n) * np.sum(Y * np.log(A) + (1 - Y) * np.log(1 - A)) # negative log likelihood
 
@@ -36,7 +39,9 @@ class LogisticRegressionBase:
     def optimize(self, w, b, X, Y):
         costs = []
         for epoch in range(self.num_epochs):
+            # compute gradient
             dw, db, cost = self.propagate(w, b, X, Y)
+            # adjust step
             w, b = w - self.learning_rate * dw, b - self.learning_rate * db
             if epoch % 500 == 0:
                 costs.append(cost)
@@ -75,7 +80,9 @@ class LogisticRegressionBase:
 class LogisticRegressionPytorch(nn.Module):
     def __init__(self, input_size):
         super(LogisticRegressionPytorch, self).__init__()
+        # single neuron
         self.linear = nn.Linear(input_size, 1)
+        # activation fxn
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
