@@ -7,7 +7,6 @@ import { MantineProvider, createTheme, MantineColorsTuple } from '@mantine/core'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Contact from './pages/contact/Contact.tsx'
 import About from './pages/about/About.tsx'
-import Login from './pages/login/Login.tsx'
 
 const colours: MantineColorsTuple = [
     "#f3edff",
@@ -42,10 +41,7 @@ const router = createBrowserRouter([
         path: "/about",
         element: <About />
     },
-    {
-        path: "/login",
-        element: <Login />
-    }
+
 ])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
