@@ -1,4 +1,4 @@
-import { ThemeIcon, Text, Title, Container, SimpleGrid, rem } from '@mantine/core';
+import { ThemeIcon, Text, Title, Container, rem } from '@mantine/core';
 import classes from './FeaturesGrid.module.css';
 
 interface FeatureProps {

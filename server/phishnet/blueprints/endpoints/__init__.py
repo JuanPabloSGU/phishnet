@@ -1,55 +1,54 @@
 import json
+import os
 import requests
 import numpy as np
-from flask import Blueprint
+from flask import Blueprint, request
 from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
-from flask_jwt_extended import create_access_token, jwt_required
 from flask_cors import CORS
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
-CORS(blueprint)
 
-
-class LoginResource(Resource):
-    @ swag_from({
-        'responses': {
-            200: {
-                'description': 'Hello, World!',
-                'schema': {
-                    'type': 'object',
-                    'properties': {
-                        'message': {
-                            'type': 'string'
-                        },
-                        'access_token': {
-                            'type': 'string'
-                        }
-                    }
-                }
-            }
-        }
-    })
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('username', type=str,
-                            required=True, help='Username is required')
-        parser.add_argument('password', type=str,
-                            required=True, help='Password is required')
-
-        args = parser.parse_args()
-        username = args['username']
-        # password = args['password']
-
-        access_token = create_access_token(identity=username)
-        return {'message': 'Succesful login!',
-                'access_token': access_token}
-
-
-api.add_resource(LoginResource, '/login')
+#
+# class LoginResource(Resource):
+#     @ swag_from({
+#         'responses': {
+#             200: {
+#                 'description': 'Hello, World!',
+#                 'schema': {
+#                     'type': 'object',
+#                     'properties': {
+#                         'message': {
+#                             'type': 'string'
+#                         },
+#                         'access_token': {
+#                             'type': 'string'
+#                         }
+#                     }
+#                 }
+#             }
+#         }
+#     })
+#     def post(self):
+#         parser = reqparse.RequestParser()
+#         parser.add_argument('username', type=str,
+#                             required=True, help='Username is required')
+#         parser.add_argument('password', type=str,
+#                             required=True, help='Password is required')
+#
+#         args = parser.parse_args()
+#         username = args['username']
+#         # password = args['password']
+#
+#         access_token = create_access_token(identity=username)
+#         return {'message': 'Succesful login!',
+#                 'access_token': access_token}
+#
+#
+# api.add_resource(LoginResource, '/login')
 
 
 class HelloWorldResource(Resource):
@@ -94,7 +93,6 @@ class ElasticsearchResource(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def get(self):
         es = elastic.get_elastic().info(pretty=True)
         return {'message': 'Elasticsearch is running.', 'info': es.body}
@@ -224,10 +222,15 @@ class LogisticalRegression(Resource):
             }
         },
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
-
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Authorization'}
         if url is None:
             return {'message': 'URL is invalid.'}
 
@@ -291,10 +294,15 @@ class RandomForest(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
-
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Authorization'}
         if url is None:
             return {'message': 'URL is invalid.'}
 
@@ -358,9 +366,15 @@ class MLPResource(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
+        all_headers = request.headers
+        authorization = all_headers.get('Authorization')
+        if authorization is None:
+            return {'message': 'Authorization is required.'}
+        valid_auth_codes = (os.getenv('AUTH_CODES') or '').split(',')
+        if authorization not in valid_auth_codes:
+            return {'message': 'Authorization'}
 
         if url is None:
             return {'message': 'URL is invalid.'}

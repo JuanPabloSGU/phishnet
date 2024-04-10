@@ -1,23 +1,24 @@
 from flask import Flask
+from flask_cors import CORS
 from flask_restful import Api
 from flasgger import Swagger
 from .blueprints.endpoints import blueprint as endpoints
-from flask_jwt_extended import JWTManager
 
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_pyfile('config.py')
-    app.register_blueprint(endpoints)
 
+    app.config.from_pyfile('config.py')
+    CORS(endpoints, resources={r"/api/*": {"origins": "*"}})
+    app.register_blueprint(endpoints)
     Api(app)
     Swagger(app)
-    JWTManager(app)
     return app
 
 
 def start_server():
     app = create_app()
+    cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
     app.run()
 
 
