@@ -10,13 +10,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from phishnet import create_app, start_server
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def app():
     app = create_app()
     yield app
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def client(app):
     return app.test_client()
 

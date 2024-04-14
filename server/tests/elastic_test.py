@@ -7,7 +7,7 @@ from phishnet import elastic
 
 
 def test_get_elastic(client):
-    response = client.get("/api/v1/elastic", headers=generate_jwt(client))
+    response = client.get("/api/v1/elastic")
 
 
     assert response.json["message"] == "Elasticsearch is running."
