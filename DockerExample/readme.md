@@ -1,4 +1,4 @@
-##Docker images explaination
+##Docker images explanation
 
 DockerPy is a temporary docker that sends a while loop to test out the inference of the triton server container
 
