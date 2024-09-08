@@ -37,22 +37,21 @@ def download_from_url(url, stream):
     return response
 
 # Helper function to add a protocol to a URL if it is missing
-async def add_protocol(url):
-    async with aiohttp.ClientSession() as session:
-        # If the URL doesn't start with 'https://' or 'http://', attempt to add one of these protocols
-        if not url.startswith(('https://', 'http://')):
-            for protocol in ['https://', 'http://']:
-                try:
-                    # Send a GET request to the URL with the added protocol
-                    async with session.get(protocol + url, timeout=1) as res:
-                        # If the response status code is 200, the protocol was successfully added
-                        if res.status == 200:
-                            logging.info("Added protocol to URL: %s", url)
-                            return str(res.url)
-                        # If the response status code is not 200, return None
-                        else:
-                            return None
-                except Exception as e:
-                    logging.error("Error adding protocol to URL: %s", str(e))
-                    return None
-        return url
+async def add_protocol(session, url):
+    # If the URL doesn't start with 'https://' or 'http://', attempt to add one of these protocols
+    if not url.startswith(('https://', 'http://')):
+        for protocol in ['https://', 'http://']:
+            try:
+                # Send a GET request to the URL with the added protocol
+                async with session.get(protocol + url, timeout=1) as res:
+                    # If the response status code is 200, the protocol was successfully added
+                    if res.status == 200:
+                        logging.info("Added protocol to URL: %s", url)
+                        return str(res.url)
+                    # If the response status code is not 200, return None
+                    else:
+                        return None
+            except Exception as e:
+                logging.error("Error adding protocol to URL: %s", str(e))
+                return None
+    return url
