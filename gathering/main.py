@@ -35,13 +35,13 @@ async def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
     with open(f'{index}.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['url', 'type'])
-        for row in urls:
+
+        async def process_url(row):
             url = row.decode() if is_url else row.strip()
             url = await utils.add_protocol(url)
             if url is None:
-                continue
+                return None
 
-            # Check if the URL is already in Elasticsearch
             res = es_client.search(index=index, body={
                 'query': {
                     'term': {
@@ -50,14 +50,18 @@ async def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
                 }
             })
 
-            # If the URL is already in Elasticsearch, skip it
             if res['hits']['total']['value'] > 0:
                 logging.info(f'{url} already exists in {index}')
-                continue
+                return None
 
-            writer.writerow([url, type])
+            return [url, type]
 
-    # Load the CSV file into Elasticsearch
+        tasks = [process_url(row) for row in urls]
+        results = await asyncio.gather(*tasks)
+        for result in results:
+            if result is not None:
+                writer.writerow(result)
+
     logging.info(f'Loading data into Elasticsearch')
     utils.load_csv_to_es(f'{index}.csv', es_client, index)
 
