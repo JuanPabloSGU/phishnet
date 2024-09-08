@@ -1,3 +1,4 @@
+import asyncio
 import concurrent.futures
 import logging
 import os
@@ -64,26 +65,27 @@ def get_all_urls(es, index):
   
 
 # Function to extract all features from a URL
-def extract_features(url_dicts):
-    features = []
-    for url_dict in url_dicts:
-        url = add_protocol(url_dict['url'])
+async def extract_features(url_dicts):
+    async def extract_single_url(url_dict):
+        url = await add_protocol(url_dict['url'])
         if url is None:
-            continue
+            return None
         type = url_dict['type']
-        content_features = content_extractor.extract(url)
+        content_features = await content_extractor.extract(url)
         domain_features = domain_extractor.extract(url)
         lexical_features = lexical_extractor.extract(url)
-        features.append({'url': url, 'type': type, **content_features, **domain_features, **lexical_features})
-    return features
+        return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features}
 
+    tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
+    results = await asyncio.gather(*tasks)
+    return [result for result in results if result is not None]
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-def process_and_upload_batch(url_dicts_batch, index, batch_number):
+async def process_and_upload_batch(url_dicts_batch, index, batch_number):
     es_client = initialize_es_client()
 
     logging.info('Extracting features')
-    data = extract_features(url_dicts_batch)
+    data = await extract_features(url_dicts_batch)
 
     csv_file = f'features_{batch_number}.csv'
     logging.info(f'Saving features to {csv_file}')
@@ -95,7 +97,7 @@ def process_and_upload_batch(url_dicts_batch, index, batch_number):
 
     os.remove(csv_file) # Delete CSV file after loading it into Elasticsearch
 
-def main():
+async def main():
     es_client = initialize_es_client()
     SOURCE_INDEX = os.getenv('SOURCE_INDEX')
     DESTINATION_INDEX = os.getenv('DESTINATION_INDEX')
@@ -125,21 +127,21 @@ def main():
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
     # Process the unprocessed URLs in batches
-    with concurrent.futures.ProcessPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        loop = asyncio.get_running_loop()
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
-
-            future = executor.submit(process_and_upload_batch, batch)
-
             batch_index = i // batch_size + 1
-            future = executor.submit(process_and_upload_batch, batch, DESTINATION_INDEX, batch_index)
 
+            future = loop.run_in_executor(executor, process_and_upload_batch, batch, DESTINATION_INDEX, batch_index)
             futures.append(future)
 
     # Wait for all processes to complete
-    for future in concurrent.futures.as_completed(futures):
-        if future.exception() is not None:
-            logging.error(f"Error in thread: {future.exception()}")
+    for future in asyncio.as_completed(futures):
+        try:
+            await future
+        except Exception as e:
+            logging.error(f"Error in thread: {e}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

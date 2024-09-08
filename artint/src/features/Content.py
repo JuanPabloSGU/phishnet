@@ -1,3 +1,5 @@
+import aiohttp
+import asyncio
 import random
 from bs4 import BeautifulSoup
 import requests
@@ -40,21 +42,22 @@ class Content:
         self.headers['User-Agent'] = self.user_agent
         self.feat_dict = {}
     
-    def make_request(self, url: str, timeout: int, retries: int) -> requests.Response:
-        for idx in range(retries):
-            try:
-                response = requests.get(url, headers=self.headers, timeout=timeout, allow_redirects=True)
-                response.raise_for_status()
-                return response
-            except requests.exceptions.RequestException as e:
-                retry_delay = 2**idx
-                print(f'\033[34mRequestException for {url}. Retrying in {retry_delay} seconds.\033[0m')
-                time.sleep(retry_delay)
-            except Exception as e:
-                print(f'\033[31mError making request for {url}: {e}\033[0m')
-                return None
-        print(f'\033[31mFailed to make request after {retries} retries.\033[0m')
-        return None
+    async def make_request(self, url: str, timeout: int, retries: int) -> aiohttp.ClientResponse:
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            for idx in range(retries):
+                try:
+                    async with session.get(url, timeout=timeout, allow_redirects=True) as response:
+                        response.raise_for_status()
+                        return response
+                except aiohttp.ClientError as e:
+                    retry_delay = 2**idx
+                    print(f'\033[34mClientError for {url}. Retrying in {retry_delay} seconds.\033[0m')
+                    await asyncio.sleep(retry_delay)
+                except Exception as e:
+                    print(f'\033[31mError making request for {url}: {e}\033[0m')
+                    return None
+            print(f'\033[31mFailed to make request after {retries} retries.\033[0m')
+            return None
 
     def redirects(self, response: requests.Response) -> int:
         """
@@ -243,11 +246,11 @@ class Content:
             return None
 
 
-    def extract(self, url):
+    async def extract(self, url):
         self.feat_dict['url'] = url
 
         try:
-            response = self.make_request(url, timeout=5, retries=3)
+            response = await self.make_request(url, timeout=5, retries=3)
             if response is None:
                 return {}
             self.feat_dict['content_redirects'] = self.redirects(response)
@@ -256,7 +259,7 @@ class Content:
             return {}
 
         try:
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(await response.content, 'html.parser')
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
             self.feat_dict['content_len_links'] = self.get_links(soup)
