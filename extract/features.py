@@ -20,6 +20,8 @@ content_extractor = Content()
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
+session = aiohttp.ClientSession()
+
 # Function to initialize Elasticsearch client
 def initialize_es_client():
     # Load environment variables from .env file
@@ -67,7 +69,7 @@ def get_all_urls(es, index):
 # Function to extract all features from a URL
 async def extract_features(url_dicts):
     async def extract_single_url(url_dict):
-        url = await add_protocol(url_dict['url'])
+        url = await add_protocol(session, url_dict['url'])
         if url is None:
             return None
         type = url_dict['type']
