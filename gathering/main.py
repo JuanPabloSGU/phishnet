@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import logging
 import os
@@ -7,7 +8,7 @@ from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 
 # Function to fetch and index urls
-def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
+async def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
     if is_url: # If the source is a URL
         logging.info(f'Downloading data from {source}')
         data = utils.download_from_url(source, stream)
@@ -36,7 +37,7 @@ def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
         writer.writerow(['url', 'type'])
         for row in urls:
             url = row.decode() if is_url else row.strip()
-            url = utils.add_protocol(url)
+            url = await utils.add_protocol(url)
             if url is None:
                 continue
 
@@ -101,20 +102,20 @@ def main():
         utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
 
         logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
-        fetch_and_index_urls(es_client, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False)
+        asyncio.run(fetch_and_index_urls(es_client, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False))
 
         logging.info("Processing malicious URLs for 'openphish.txt'")
-        fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
+        asyncio.run(fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False))
 
         logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
-        fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
+        asyncio.run(fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False))
 
     # Process malicious URLs from OpenFish and Phishing Database
     logging.info('Processing malicious URLs for f{OPENFISH_URL}') 
-    fetch_and_index_urls(es_client, OPENFISH_URL, 'raw', False, 1, True)
+    asyncio.run(fetch_and_index_urls(es_client, OPENFISH_URL, 'raw', False, 1, True))
 
     logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
-    fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
+    asyncio.run(fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True))
         
     logging.info('Completed all tasks.') 
 
