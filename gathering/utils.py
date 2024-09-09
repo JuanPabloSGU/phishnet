@@ -48,10 +48,8 @@ async def add_protocol(session, url):
                     if res.status == 200:
                         logging.info("Added protocol to URL: %s", url)
                         return str(res.url)
-                    # If the response status code is not 200, return None
-                    else:
-                        return None
             except Exception as e:
                 logging.error("Error adding protocol to URL: %s", str(e))
-                return None
+        return None
+    # If the URL already starts with 'https://' or 'http://', return it as is
     return url
