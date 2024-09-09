@@ -8,10 +8,8 @@ import utils
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 
-session = aiohttp.ClientSession()
-
 # Function to fetch and index urls
-async def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
+async def fetch_and_index_urls(es_client, session, source, index, stream, type, is_url):
     if is_url: # If the source is a URL
         logging.info(f'Downloading data from {source}')
         data = utils.download_from_url(source, stream)
@@ -99,33 +97,33 @@ async def main():
         logging.critical('Could not connect to Elasticsearch:', e)
         sys.exit(1)
 
-    # If BACKUP is set to 'True', create a raw index and load data into it
-    BACKUP = os.getenv('BACKUP')
-    if BACKUP == 'True':
-        es_client.indices.create(index='raw')
+    async with aiohttp.ClientSession() as session:
+        # If BACKUP is set to 'True', create a raw index and load data into it
+        BACKUP = os.getenv('BACKUP')
+        if BACKUP == 'True':
+            es_client.indices.create(index='raw')
 
-        # One time use in case the database is cleared and we need to re-import the data
-        logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
-        utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
+            # One time use in case the database is cleared and we need to re-import the data
+            logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
+            utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
 
-        logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
-        await fetch_and_index_urls(es_client, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False)
+            logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False)
 
-        logging.info("Processing malicious URLs for 'openphish.txt'")
-        await fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
+            logging.info("Processing malicious URLs for 'openphish.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/openphish.txt', 'raw', False, 1, False)
 
-        logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
-        await fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
+            logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
 
-    # Process malicious URLs from OpenFish and Phishing Database
-    logging.info('Processing malicious URLs for f{OPENFISH_URL}') 
-    await fetch_and_index_urls(es_client, OPENFISH_URL, 'raw', False, 1, True)
+        # Process malicious URLs from OpenFish and Phishing Database
+        logging.info(f'Processing malicious URLs for {OPENFISH_URL}') 
+        await fetch_and_index_urls(es_client, session, OPENFISH_URL, 'raw', False, 1, True)
 
-    logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
-    await fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
-        
-    logging.info('Completed all tasks.') 
-    await session.close()
+        logging.info(f'Processing malicious URLs for {PHISHING_DATABASE_URL}')
+        await fetch_and_index_urls(es_client, session, PHISHING_DATABASE_URL, 'raw', True, 1, True)
+
+    logging.info('Completed all tasks.')
 
 if __name__ == '__main__':
     asyncio.run(main())

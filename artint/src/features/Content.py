@@ -259,7 +259,7 @@ class Content:
             return {}
 
         try:
-            soup = BeautifulSoup(await response.content, 'html.parser')
+            soup = BeautifulSoup(await response.read(), 'html.parser')
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
             self.feat_dict['content_len_links'] = self.get_links(soup)
