@@ -39,7 +39,7 @@ async def fetch_and_index_urls(es_client, session, source, index, stream, type, 
 
         async def process_url(row):
             url = row.decode() if is_url else row.strip()
-            url = await utils.add_protocol(session, url)
+            url = await utils.preprocess_url(session, url)
             if url is None:
                 return None
 

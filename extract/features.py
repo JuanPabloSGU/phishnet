@@ -13,7 +13,7 @@ from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from gathering.utils import load_csv_to_es, add_protocol
+from gathering.utils import load_csv_to_es, preprocess_url
 
 # Initialize feature extractors
 content_extractor = Content()
@@ -69,7 +69,7 @@ def get_all_urls(es, index):
 # Function to extract all features from a URL
 async def extract_features(url_dicts):
     async def extract_single_url(url_dict):
-        url = await add_protocol(session, url_dict['url'])
+        url = await preprocess_url(session, url_dict['url'])
         if url is None:
             return None
         type = url_dict['type']
