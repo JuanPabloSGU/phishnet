@@ -1,6 +1,7 @@
 import aiohttp
 import csv
 import logging
+import re
 import requests
 import sys
 from elasticsearch import helpers
@@ -36,20 +37,24 @@ def download_from_url(url, stream):
 
     return response
 
-# Helper function to add a protocol to a URL if it is missing
-async def add_protocol(session, url):
-    # If the URL doesn't start with 'https://' or 'http://', attempt to add one of these protocols
-    if not url.startswith(('https://', 'http://')):
-        for protocol in ['https://', 'http://']:
-            try:
-                # Send a GET request to the URL with the added protocol
-                async with session.get(protocol + url, timeout=1) as res:
-                    # If the response status code is 200, the protocol was successfully added
-                    if res.status == 200:
-                        logging.info("Added protocol to URL: %s", url)
-                        return str(res.url)
-            except Exception as e:
-                logging.error("Error adding protocol to URL: %s", str(e))
-        return None
-    # If the URL already starts with 'https://' or 'http://', return it as is
+# Helper function to add scheme and subdomain to a URL for consistency
+async def preprocess_url(session, url):
+    # Add scheme if missing
+    if not re.match(r'^(http|https)://', url):
+        # Try https first
+        test_url = 'https://' + url
+        try:
+            async with session.get(test_url, timeout=1) as response:
+                if response.status < 400:
+                    url = test_url
+                else:
+                    url = 'http://' + url
+        except aiohttp.ClientError:
+            # If https fails, fall back to http
+            url = 'http://' + url
+    
+    # Add 'www.' if missing
+    if not re.match(r'^https?://www\.', url):
+        url = re.sub(r'^(https?://)', r'\1www.', url)
+    
     return url
