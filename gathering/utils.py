@@ -1,3 +1,4 @@
+import asyncio
 import aiohttp
 import csv
 import logging
@@ -37,24 +38,25 @@ def download_from_url(url, stream):
 
     return response
 
-# Helper function to add scheme and subdomain to a URL for consistency
+# Helper function to add scheme to a URL for consistency
 async def preprocess_url(session, url):
     # Add scheme if missing
     if not re.match(r'^(http|https)://', url):
-        # Try https first
         test_url = 'https://' + url
         try:
-            async with session.get(test_url, timeout=1) as response:
+            # Attempt to fetch the URL with HTTPS
+            async with session.get(test_url, timeout=5) as response:
                 if response.status < 400:
-                    url = test_url
+                    return test_url
                 else:
                     url = 'http://' + url
-        except aiohttp.ClientError:
-            # If https fails, fall back to http
+        except (asyncio.TimeoutError, aiohttp.ClientError) as e:
             url = 'http://' + url
-    
-    # Add 'www.' if missing
-    if not re.match(r'^https?://www\.', url):
-        url = re.sub(r'^(https?://)', r'\1www.', url)
-    
-    return url
+
+    # If the URL already has a scheme, or HTTPS failed
+    try:
+        async with session.get(url, timeout=5) as response:
+            if response.status < 400:
+                return url
+    except (asyncio.TimeoutError, aiohttp.ClientError) as e:
+        return None  # Skip the URL if both HTTPS and HTTP failed
