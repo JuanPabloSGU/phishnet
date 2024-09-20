@@ -110,8 +110,11 @@ async def main():
                 es_client.indices.create(index=TARGET_INDEX)
 
             # One time use in case the database is cleared and we need to re-import the data
-            logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
-            utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, TARGET_INDEX)
+            logging.info("Loading 'PhiUSIIL - benign.txt' into Elasticsearch, skipping search due to empty index.")
+            await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - benign.txt', TARGET_INDEX, False, 0, False)
+            
+            logging.info("Processing benign URLs for 'PhiUSIIL - malicious.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - malicious.txt', TARGET_INDEX, False, 1, False)
 
             logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
             await fetch_and_index_urls(es_client, session, 'backups/benign-top-1000000-1.txt', TARGET_INDEX, False, 0, False)
