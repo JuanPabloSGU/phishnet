@@ -67,7 +67,7 @@ def get_all_urls(es, index):
   
 # Function to extract all features from a URL
 async def extract_features(session, url_dicts):
-    semaphore = asyncio.Semaphore(20)
+    semaphore = asyncio.Semaphore(100)
 
     async def extract_single_url(url_dict):
         async with semaphore:
