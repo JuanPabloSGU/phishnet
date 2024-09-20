@@ -118,7 +118,10 @@ async def preprocess_url(session, url):
     # Skip the URL if an Exception or Error occurred
     except asyncio.TimeoutError:
         logging.warning(f"URL skipped: {http_url} - Timeout occurred")
-        return None  
+        return None
+    except asyncio.CancelledError:
+        logging.warning(f"URL skipped: {url} - Request was cancelled")
+        return None
     except aiohttp.ClientError as e:
         logging.warning(f"URL skipped: {http_url} - Client error occurred: {e}")
         return None
