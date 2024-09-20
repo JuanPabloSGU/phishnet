@@ -96,7 +96,7 @@ async def preprocess_url(session, url):
         https_url = 'https://' + url
         try:
             # Attempt to fetch the URL with HTTPS
-            response = await session.get(https_url, headers=headers, timeout=5, allow_redirects=True)
+            response = await session.head(https_url, headers=headers, timeout=5, allow_redirects=True)
             if response.status < 400:
                 return https_url
             else:
@@ -109,7 +109,7 @@ async def preprocess_url(session, url):
 
     try:
         # Attempt to fetch the URL with HTTP
-        response = await session.get(http_url, headers=headers, timeout=5, allow_redirects=True)
+        response = await session.head(http_url, headers=headers, timeout=5, allow_redirects=True)
         if response.status < 400:
             return http_url
         else:
