@@ -1,8 +1,7 @@
+import aiohttp
 import asyncio
-import concurrent.futures
 import logging
 import os
-import pandas as pd
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -13,14 +12,13 @@ from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from gathering.utils import load_csv_to_es, preprocess_url
+from elasticsearch.helpers import bulk
+from gathering.utils import preprocess_url
 
 # Initialize feature extractors
 content_extractor = Content()
 domain_extractor = Domain()
 lexical_extractor = Lexical()
-
-session = aiohttp.ClientSession()
 
 # Function to initialize Elasticsearch client
 def initialize_es_client():
@@ -42,16 +40,18 @@ def initialize_es_client():
 
 # Function to get all data from an Elasticsearch index
 def get_es_index(es, index):
-    logging.info('Getting all data from Elasticsearch index: %s', index)
-    query = {"query": {"match_all": {}}}
-    response = es.search(index=index, body=query, scroll='1m', size=5000)
-    all_data = response['hits']['hits']
-    while len(response['hits']['hits']):
-        response = es.scroll(scroll_id=response['_scroll_id'], scroll='1m')
-        all_data += response['hits']['hits']
-    logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
-    return all_data
-
+    try:
+        logging.info('Getting all data from Elasticsearch index: %s', index)
+        query = {"query": {"match_all": {}}}
+        response = es.search(index=index, body=query, scroll='1m', size=5000)
+        all_data = response['hits']['hits']
+        while len(response['hits']['hits']):
+            response = es.scroll(scroll_id=response['_scroll_id'], scroll='1m')
+            all_data += response['hits']['hits']
+        logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
+        return all_data
+    finally:
+        es.clear_scroll(scroll_id=response['_scroll_id'])
 
 # Function to get all URLs from an Elasticsearch index
 def get_all_urls(es, index):
@@ -65,39 +65,41 @@ def get_all_urls(es, index):
     logging.info('Retrieved %d urls from Elasticsearch index: %s', len(all_urls), index)
     return set(all_urls)
   
-
 # Function to extract all features from a URL
-async def extract_features(url_dicts):
+async def extract_features(session, url_dicts):
+    semaphore = asyncio.Semaphore(20)
+
     async def extract_single_url(url_dict):
-        url = await preprocess_url(session, url_dict['url'])
-        if url is None:
-            return None
-        type = url_dict['type']
-        content_features = await content_extractor.extract(url)
-        domain_features = domain_extractor.extract(url)
-        lexical_features = lexical_extractor.extract(url)
-        return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features}
+        async with semaphore:
+            url = await preprocess_url(session, url_dict['url'])
+            if url is None:
+                return None
+            logging.info('URL: %s is valid', url)
+            type = url_dict['type']
+            content_features = await content_extractor.extract(url)
+            domain_features = domain_extractor.extract(url)
+            lexical_features = lexical_extractor.extract(url)
+            return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features}
 
     tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
     results = await asyncio.gather(*tasks)
     return [result for result in results if result is not None]
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-async def process_and_upload_batch(url_dicts_batch, index, batch_number):
-    es_client = initialize_es_client()
-
-    logging.info('Extracting features')
-    data = await extract_features(url_dicts_batch)
-
-    csv_file = f'features_{batch_number}.csv'
-    logging.info(f'Saving features to {csv_file}')
-    df = pd.DataFrame(data)
-    df.to_csv(csv_file, index=False)
-
-    load_csv_to_es(csv_file, es_client, index)
+async def process_and_upload_batch(session, url_dicts_batch, es_client, index, batch_number):
+    logging.info('Extracting features for batch number: %d', batch_number)
+    data = await extract_features(session, url_dicts_batch)
+    actions = [
+        {
+            '_index': index,
+            '_source': doc
+        }
+        for doc in data
+    ]
+    
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, bulk, es_client, actions)
     logging.info(f'Processed batch number {batch_number} and uploaded into {index} index')
-
-    os.remove(csv_file) # Delete CSV file after loading it into Elasticsearch
 
 async def main():
     es_client = initialize_es_client()
@@ -128,22 +130,21 @@ async def main():
     futures = []
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
-    # Process the unprocessed URLs in batches
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        loop = asyncio.get_running_loop()
+    async with aiohttp.ClientSession() as session:
+        # Process the unprocessed URLs in batches
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
             batch_index = i // batch_size + 1
+            task = asyncio.create_task(
+                process_and_upload_batch(session, batch, es_client, DESTINATION_INDEX, batch_index)
+            )
+            futures.append(task)
 
-            future = loop.run_in_executor(executor, process_and_upload_batch, batch, DESTINATION_INDEX, batch_index)
-            futures.append(future)
-
-    # Wait for all processes to complete
-    for future in asyncio.as_completed(futures):
-        try:
-            await future
-        except Exception as e:
-            logging.error(f"Error in thread: {e}")
+        for future in asyncio.as_completed(futures):
+            try:
+                await future
+            except Exception as e:
+                logging.error(f"Error in task: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
