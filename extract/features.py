@@ -66,15 +66,12 @@ def get_all_urls(es, index):
     return set(all_urls)
   
 # Function to extract all features from a URL
-async def extract_features(session, url_dicts):
-    semaphore = asyncio.Semaphore(100)
+async def extract_features(url_dicts):
+    semaphore = asyncio.Semaphore(50)
 
     async def extract_single_url(url_dict):
         async with semaphore:
-            url = await preprocess_url(session, url_dict['url'])
-            if url is None:
-                return None
-            logging.info('URL: %s is valid', url)
+            url = url_dict['url']
             type = url_dict['type']
             content_features = await content_extractor.extract(url)
             domain_features = domain_extractor.extract(url)
@@ -86,9 +83,9 @@ async def extract_features(session, url_dicts):
     return [result for result in results if result is not None]
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-async def process_and_upload_batch(session, url_dicts_batch, es_client, index, batch_number):
+async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number):
     logging.info('Extracting features for batch number: %d', batch_number)
-    data = await extract_features(session, url_dicts_batch)
+    data = await extract_features(url_dicts_batch)
     actions = [
         {
             '_index': index,
@@ -130,13 +127,13 @@ async def main():
     futures = []
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession():
         # Process the unprocessed URLs in batches
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
             batch_index = i // batch_size + 1
             task = asyncio.create_task(
-                process_and_upload_batch(session, batch, es_client, DESTINATION_INDEX, batch_index)
+                process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index)
             )
             futures.append(task)
 
