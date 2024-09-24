@@ -3,7 +3,6 @@ import os
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
-import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from gathering.utils import generate_user_agent

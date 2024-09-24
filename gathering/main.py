@@ -82,7 +82,7 @@ async def main():
     OPENFISH_URL = os.getenv('OPENFISH_URL')
     PHISHING_DATABASE_URL = os.getenv('PHISHING_DATABASE_URL')
 
-    TARGET_INDEX = 'raw'
+    TARGET_INDEX = 'raw2'
 
     # Connect to Elasticsearch
     logging.info('Connecting to Elasticsearch')

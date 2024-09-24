@@ -56,6 +56,7 @@ async def preprocess_url(session, url):
             # Attempt to fetch the URL with HTTPS
             response = await session.head(https_url, headers=headers, timeout=5, allow_redirects=True)
             if response.status < 400:
+                logging.info(f"HTTPS addition was valid: {https_url}")
                 return https_url
             else:
                 http_url = 'http://' + url
@@ -69,6 +70,7 @@ async def preprocess_url(session, url):
         # Attempt to fetch the URL with HTTP
         response = await session.head(http_url, headers=headers, timeout=5, allow_redirects=True)
         if response.status < 400:
+            logging.info(f"URL validated: {http_url}")
             return http_url
         else:
             logging.warning(f"URL skipped: {http_url} - Received status code: {response.status}")
@@ -78,7 +80,7 @@ async def preprocess_url(session, url):
         logging.warning(f"URL skipped: {http_url} - Timeout occurred")
         return None
     except asyncio.CancelledError:
-        logging.warning(f"URL skipped: {url} - Request was cancelled")
+        logging.warning(f"URL skipped: {http_url} - Request was cancelled")
         return None
     except aiohttp.ClientError as e:
         logging.warning(f"URL skipped: {http_url} - Client error occurred: {e}")
