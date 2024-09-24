@@ -217,7 +217,7 @@ class Content:
         self.feat_dict['url'] = url
 
         try:
-            response_data = await self.make_request(url, timeout=5, retries=3)
+            response_data = await self.make_request(url, timeout=15, retries=3)
             if response_data is None:
                 return {}
             self.feat_dict['content_redirects'] = response_data['redirects']
