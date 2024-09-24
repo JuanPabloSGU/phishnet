@@ -54,7 +54,7 @@ async def preprocess_url(session, url):
         https_url = 'https://' + url
         try:
             # Attempt to fetch the URL with HTTPS
-            response = await session.head(https_url, headers=headers, timeout=5, allow_redirects=True)
+            response = await session.head(https_url, headers=headers, timeout=15, allow_redirects=True)
             if response.status < 400:
                 logging.info(f"HTTPS addition was valid: {https_url}")
                 return https_url
@@ -68,7 +68,7 @@ async def preprocess_url(session, url):
 
     try:
         # Attempt to fetch the URL with HTTP
-        response = await session.head(http_url, headers=headers, timeout=5, allow_redirects=True)
+        response = await session.head(http_url, headers=headers, timeout=15, allow_redirects=True)
         if response.status < 400:
             logging.info(f"URL validated: {http_url}")
             return http_url
