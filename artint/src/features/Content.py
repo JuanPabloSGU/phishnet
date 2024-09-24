@@ -8,31 +8,32 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
 from gathering.utils import generate_user_agent
 
 class Content:
-    def __init__(self) -> None:
+    def __init__(self, session: aiohttp.ClientSession) -> None:
+        self.session = session
         self.user_agent = generate_user_agent()
-        self.headers = {}
-        self.headers['User-Agent'] = self.user_agent
-        self.headers['Connection'] = 'close'
+        self.headers = {
+            'User-Agent': self.user_agent,
+            'Connection': 'close'
+        }
         self.feat_dict = {}
-    
-    async def make_request(self, url: str, timeout: int, retries: int) -> aiohttp.ClientResponse:
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            for idx in range(retries):
-                try:
-                    async with session.get(url, timeout=timeout, allow_redirects=True) as response:
-                        response.raise_for_status()
-                        content = await response.read()
-                        redirects = len(response.history)
-                        return {'content': content, 'redirects': redirects}
-                except aiohttp.ClientError as e:
-                    retry_delay = 2**idx
-                    print(f'\033[34mClientError for {url}. Retrying in {retry_delay} seconds.\033[0m')
-                    await asyncio.sleep(retry_delay)
-                except Exception as e:
-                    print(f'\033[31mError making request for {url}: {e}\033[0m')
-                    return None
-            print(f'\033[31mFailed to make request after {retries} retries.\033[0m')
-            return None
+
+    async def make_request(self, url: str, timeout: int, retries: int):
+        for idx in range(retries):
+            try:
+                async with self.session.get(url, timeout=timeout, allow_redirects=True) as response:
+                    response.raise_for_status()
+                    content = await response.read()
+                    redirects = len(response.history)
+                    return {'content': content, 'redirects': redirects}
+            except aiohttp.ClientError as e:
+                retry_delay = 2**idx
+                print(f'ClientError for {url}. Retrying in {retry_delay} seconds.')
+                await asyncio.sleep(retry_delay)
+            except Exception as e:
+                print(f'Error making request for {url}: {e}')
+                return None
+        print(f'Failed to make request after {retries} retries.')
+        return None
     
     def get_links(self, soup: BeautifulSoup) -> int:
         """
@@ -250,12 +251,13 @@ class Content:
         return self.feat_dict
 
 # For testing purposes
-# example = Content()
 # async def run_example():
-#     await example.extract('https://httpbin.org/')
-    
-#     for key, value in example.feat_dict.items():
-#         print(f"{key}: {type(value)}")
-#         print(value)
+#     async with aiohttp.ClientSession() as session:
+#         example = Content(session)
+#         await example.extract('http://www.blackgeeksofdragoncon.com')
+        
+#         for key, value in example.feat_dict.items():
+#             print(f"{key}: {type(value)}")
+#             print(value)
 
 # asyncio.run(run_example())
