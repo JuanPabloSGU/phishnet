@@ -1,51 +1,9 @@
 import asyncio
 import aiohttp
-import csv
-import hashlib
 import logging
 import random
 import re
 import requests
-import sys
-from elasticsearch import helpers
-
-# Setting the maximum limit for field size
-try:
-    csv.field_size_limit(sys.maxsize)
-except OverflowError:
-    # If the max size is too large, set the limit to the max 32-bit signed integer
-    csv.field_size_limit(2**31 - 1)
-
-# Helper function to load a CSV file into Elasticsearch
-def load_csv_to_es(file_name, es_client, data_index):
-    logging.info(f"Loading {file_name} into Elasticsearch")
-    actions = []
-
-    # Open the CSV file and create a dictionary reader
-    with open(file_name, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            url = row['url']
-            type = int(row['type'])
-            # Generate a hash of the URL to use as the document ID
-            url_id = hashlib.sha256(url.encode('utf-8')).hexdigest()
-            
-            action = {
-                '_index': data_index,
-                '_id': url_id,
-                '_source': {
-                    'url': url,
-                    'type': type
-                }
-            }
-            actions.append(action)
-
-    # Use the Elasticsearch helpers to bulk load the data into the index
-    try:
-        helpers.bulk(es_client, actions)
-        logging.info(f"Completed loading {file_name} into Elasticsearch")
-    except Exception as e:
-        logging.error(f"Error loading {file_name} into Elasticsearch: {e}")
 
 # Helper function to download data from a URL
 def download_from_url(url, stream):

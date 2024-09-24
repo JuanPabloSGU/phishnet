@@ -1,7 +1,11 @@
+import sys
+import os
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
 import requests
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from gathering.utils import generate_user_agent
 
 class Content:
@@ -9,6 +13,7 @@ class Content:
         self.user_agent = generate_user_agent()
         self.headers = {}
         self.headers['User-Agent'] = self.user_agent
+        self.headers['Connection'] = 'close'
         self.feat_dict = {}
     
     async def make_request(self, url: str, timeout: int, retries: int) -> aiohttp.ClientResponse:
@@ -17,7 +22,10 @@ class Content:
                 try:
                     async with session.get(url, timeout=timeout, allow_redirects=True) as response:
                         response.raise_for_status()
-                        return response
+                        content = await response.read()
+                        redirects = len(response.history)
+                        status = response.status
+                        return {'content': content, 'redirects': redirects, 'status': status}
                 except aiohttp.ClientError as e:
                     retry_delay = 2**idx
                     print(f'\033[34mClientError for {url}. Retrying in {retry_delay} seconds.\033[0m')
@@ -26,15 +34,6 @@ class Content:
                     print(f'\033[31mError making request for {url}: {e}\033[0m')
                     return None
             print(f'\033[31mFailed to make request after {retries} retries.\033[0m')
-            return None
-
-    def redirects(self, response: requests.Response) -> int:
-        """
-        Return the number of redirects in a given response.
-        """
-        try:
-            return len(response.history)
-        except:
             return None
     
     def get_links(self, soup: BeautifulSoup) -> int:
@@ -219,16 +218,20 @@ class Content:
         self.feat_dict['url'] = url
 
         try:
-            response = await self.make_request(url, timeout=5, retries=3)
-            if response is None:
+            response_data = await self.make_request(url, timeout=5, retries=3)
+            if response_data is None:
                 return {}
-            self.feat_dict['content_redirects'] = self.redirects(response)
+            self.feat_dict['content_redirects'] = response_data['redirects']
         except Exception as e:
-            print(f'Error making request: {e}')
+            print(f'Content.py: Error making request: {e}')
             return {}
 
         try:
-            soup = BeautifulSoup(await response.read(), 'html.parser')
+            content = response_data['content']
+            status = response_data['status']
+            print(f"Response Status: {status}")
+
+            soup = BeautifulSoup(content, 'html.parser')
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
             self.feat_dict['content_len_links'] = self.get_links(soup)
@@ -246,15 +249,18 @@ class Content:
             self.feat_dict['content_use_http_link'] = self.use_http_link(soup)
 
         except Exception as e:
-            print(f'Error parsing HTML: {e}')
+            print(f'Content.py: Error parsing HTML: {e}')
             return {}
         
         return self.feat_dict
 
+# For testing purposes
 # example = Content()
-# print(example.extract('https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'))
+# async def run_example():
+#     await example.extract('https://httpbin.org/')
+    
+#     for key, value in example.feat_dict.items():
+#         print(f"{key}: {type(value)}")
+#         print(value)
 
-# for keys in example.feat_dict:
-#     print(keys + " " + str(type(example.feat_dict[keys])))
-#     print(example.feat_dict[keys])
-#     print()
+# asyncio.run(run_example())

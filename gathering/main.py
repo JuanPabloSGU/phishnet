@@ -1,6 +1,5 @@
 import asyncio
 import aiohttp
-import csv
 import hashlib
 import logging
 import os
