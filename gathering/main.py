@@ -1,17 +1,26 @@
-import csv
+import asyncio
+import aiohttp
+import hashlib
 import logging
 import os
 import sys
 import utils
 from dotenv import load_dotenv
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
+from asyncio import Semaphore, Lock
 
 # Function to fetch and index urls
-def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
+async def fetch_and_index_urls(es_client, session, source, index, stream, type, is_url):
+    # Initialize a semaphore to limit the number of concurrent tasks to 50
+    semaphore = Semaphore(50)
+    batch_size = 1000
+    actions_lock = Lock()
+    actions = []
+
     if is_url: # If the source is a URL
         logging.info(f'Downloading data from {source}')
         data = utils.download_from_url(source, stream)
-        if data.status_code != 200:
+        if data is None:
             return
         urls = data.iter_lines()
     else: # If the source is a file
@@ -30,39 +39,38 @@ def fetch_and_index_urls(es_client, source, index, stream, type, is_url):
 
     # Write the URLs along with their type to a CSV file
     # A type of 0 is benign and a type of 1 is malicious
-    logging.info(f'Writing data to {index}.csv')
-    with open(f'{index}.csv', 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['url', 'type'])
-        for row in urls:
+    async def process_url(row):
+        async with semaphore:
             url = row.decode() if is_url else row.strip()
-            url = utils.add_protocol(url)
+            url = await utils.preprocess_url(session, url)
             if url is None:
-                continue
+                return
 
-            # Check if the URL is already in Elasticsearch
-            res = es_client.search(index=index, body={
-                'query': {
-                    'term': {
-                        'url.keyword': url
-                    }
+            url_id = hashlib.sha256(url.encode('utf-8')).hexdigest()
+            action = {
+                '_index': index,
+                '_id': url_id,
+                '_source': {
+                    'url': url,
+                    'type': type
                 }
-            })
+            }
 
-            # If the URL is already in Elasticsearch, skip it
-            if res['hits']['total']['value'] > 0:
-                logging.info(f'{url} already exists in {index}')
-                continue
+            async with actions_lock:
+                actions.append(action)
+                if len(actions) >= batch_size:
+                    await asyncio.to_thread(helpers.bulk, es_client, actions)
+                    actions.clear()
 
-            writer.writerow([url, type])
+    tasks = [process_url(row) for row in urls]
+    await asyncio.gather(*tasks)
 
-    # Load the CSV file into Elasticsearch
-    logging.info(f'Loading data into Elasticsearch')
-    utils.load_csv_to_es(f'{index}.csv', es_client, index)
+    async with actions_lock:
+        if actions:
+            await asyncio.to_thread(helpers.bulk, es_client, actions)
+            actions.clear()
 
-    logging.info(f'Completed loading {index} into Elasticsearch')
-
-def main():
+async def main():
     logging.basicConfig(level=logging.INFO)
     logging.info('Loading environment variables')
     load_dotenv(override=True)
@@ -73,6 +81,8 @@ def main():
     ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
     OPENFISH_URL = os.getenv('OPENFISH_URL')
     PHISHING_DATABASE_URL = os.getenv('PHISHING_DATABASE_URL')
+
+    TARGET_INDEX = 'raw2'
 
     # Connect to Elasticsearch
     logging.info('Connecting to Elasticsearch')
@@ -86,37 +96,42 @@ def main():
     logging.info('Testing Elasticsearch connection')
     try:
         info = es_client.info()
-        logging.info('Connected to Elasticsearch:', info)
+        logging.info(f'Connected to Elasticsearch: {info}')
     except Exception as e:
-        logging.critical('Could not connect to Elasticsearch:', e)
+        logging.critical(f'Could not connect to Elasticsearch: {e}')
         sys.exit(1)
 
-    # If BACKUP is set to 'True', create a raw index and load data into it
-    BACKUP = os.getenv('BACKUP')
-    if BACKUP == 'True':
-        es_client.indices.create(index='raw')
+    async with aiohttp.ClientSession() as session:
+        # If BACKUP is set to 'True', create a raw index and load data into it
+        BACKUP = os.getenv('BACKUP')
+        if BACKUP == 'True':
+            if not es_client.indices.exists(index=TARGET_INDEX):
+                es_client.indices.create(index=TARGET_INDEX)
 
-        # One time use in case the database is cleared and we need to re-import the data
-        logging.info("Loading 'PhiUSIIL url and type.csv' into Elasticsearch, skipping search due to empty index.")
-        utils.load_csv_to_es('backups/PhiUSIIL url and type.csv', es_client, 'raw')
+            # One time use in case the database is cleared and we need to re-import the data
+            logging.info("Loading 'PhiUSIIL - benign.txt' into Elasticsearch, skipping search due to empty index.")
+            await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - benign.txt', TARGET_INDEX, False, 0, False)
+            
+            logging.info("Processing benign URLs for 'PhiUSIIL - malicious.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - malicious.txt', TARGET_INDEX, False, 1, False)
 
-        logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
-        fetch_and_index_urls(es_client, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', 'raw', False, 0, False)
+            logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/benign-top-1000000-1.txt', TARGET_INDEX, False, 0, False)
 
-        logging.info("Processing malicious URLs for 'openphish.txt'")
-        fetch_and_index_urls(es_client, 'backups/openphish.txt', 'raw', False, 1, False)
+            logging.info("Processing benign URLs for 'mendeley benign - Webpages_Classification_test_data-1.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/mendeley benign - Webpages_Classification_test_data-1.txt', TARGET_INDEX, False, 0, False)
 
-        logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")
-        fetch_and_index_urls(es_client, 'backups/benign-top-1000000-1.txt', 'raw', False, 0, False)
+            logging.info("Processing malicious URLs for 'openphish.txt'")
+            await fetch_and_index_urls(es_client, session, 'backups/openphish.txt', TARGET_INDEX, False, 1, False)
 
-    # Process malicious URLs from OpenFish and Phishing Database
-    logging.info('Processing malicious URLs for f{OPENFISH_URL}') 
-    fetch_and_index_urls(es_client, OPENFISH_URL, 'raw', False, 1, True)
+        # Process malicious URLs from OpenFish and Phishing Database
+        logging.info(f'Processing malicious URLs for {OPENFISH_URL}') 
+        await fetch_and_index_urls(es_client, session, OPENFISH_URL, TARGET_INDEX, False, 1, True)
 
-    logging.info('Processing malicious URLs for f{PHISHING_DATABASE_URL}')
-    fetch_and_index_urls(es_client, PHISHING_DATABASE_URL, 'raw', True, 1, True)
-        
-    logging.info('Completed all tasks.') 
+        logging.info(f'Processing malicious URLs for {PHISHING_DATABASE_URL}')
+        await fetch_and_index_urls(es_client, session, PHISHING_DATABASE_URL, TARGET_INDEX, True, 1, True)
+
+    logging.info('Completed all tasks.')
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

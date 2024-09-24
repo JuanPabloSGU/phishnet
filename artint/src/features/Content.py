@@ -1,69 +1,39 @@
-import random
+import sys
+import os
+import aiohttp
+import asyncio
 from bs4 import BeautifulSoup
-import requests
-import time
 
-def generate_user_agent(self) -> str:
-    """
-    Generate a random user agent.
-    """
-    user_agents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.134 Mobile Safari/537.36',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/119.0.6045.109 Mobile/15E148 Safari/604.1',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.2151.58',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.2151.58',
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.134 Mobile Safari/537.36 EdgA/118.0.2088.66',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 EdgiOS/119.2151.65 Mobile/15E148 Safari/605.1.15',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14.1; rv:109.0) Gecko/20100101 Firefox/119.0',
-        'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0',
-        'Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/119.0 Firefox/119.0',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/119.0 Mobile/15E148 Safari/605.1.15',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 OPR/105.0.0.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 OPR/105.0.0.0',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 OPR/105.0.0.0',
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.134 Mobile Safari/537.36 OPR/76.2.4027.73374',
-        'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko'
-    ]
-
-    return random.choice(user_agents)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+from gathering.utils import generate_user_agent
 
 class Content:
-    def __init__(self) -> None:
-        self.user_agent = generate_user_agent(self)
-        self.headers = {}
-        self.headers['User-Agent'] = self.user_agent
+    def __init__(self, session: aiohttp.ClientSession) -> None:
+        self.session = session
+        self.user_agent = generate_user_agent()
+        self.headers = {
+            'User-Agent': self.user_agent,
+            'Connection': 'close'
+        }
         self.feat_dict = {}
-    
-    def make_request(self, url: str, timeout: int, retries: int) -> requests.Response:
+
+    async def make_request(self, url: str, timeout: int, retries: int):
         for idx in range(retries):
             try:
-                response = requests.get(url, headers=self.headers, timeout=timeout, allow_redirects=True)
-                response.raise_for_status()
-                return response
-            except requests.exceptions.RequestException as e:
+                async with self.session.get(url, timeout=timeout, allow_redirects=True) as response:
+                    response.raise_for_status()
+                    content = await response.read()
+                    redirects = len(response.history)
+                    return {'content': content, 'redirects': redirects}
+            except aiohttp.ClientError as e:
                 retry_delay = 2**idx
-                print(f'\033[34mRequestException for {url}. Retrying in {retry_delay} seconds.\033[0m')
-                time.sleep(retry_delay)
+                print(f'ClientError for {url}. Retrying in {retry_delay} seconds.')
+                await asyncio.sleep(retry_delay)
             except Exception as e:
-                print(f'\033[31mError making request for {url}: {e}\033[0m')
+                print(f'Error making request for {url}: {e}')
                 return None
-        print(f'\033[31mFailed to make request after {retries} retries.\033[0m')
+        print(f'Failed to make request after {retries} retries.')
         return None
-
-    def redirects(self, response: requests.Response) -> int:
-        """
-        Return the number of redirects in a given response.
-        """
-        try:
-            return len(response.history)
-        except:
-            return None
     
     def get_links(self, soup: BeautifulSoup) -> int:
         """
@@ -243,20 +213,21 @@ class Content:
             return None
 
 
-    def extract(self, url):
+    async def extract(self, url):
         self.feat_dict['url'] = url
 
         try:
-            response = self.make_request(url, timeout=5, retries=3)
-            if response is None:
+            response_data = await self.make_request(url, timeout=15, retries=3)
+            if response_data is None:
                 return {}
-            self.feat_dict['content_redirects'] = self.redirects(response)
+            self.feat_dict['content_redirects'] = response_data['redirects']
         except Exception as e:
-            print(f'Error making request: {e}')
+            print(f'Content.py: Error making request: {e}')
             return {}
 
         try:
-            soup = BeautifulSoup(response.content, 'html.parser')
+            content = response_data['content']
+            soup = BeautifulSoup(content, 'html.parser')
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
             self.feat_dict['content_len_links'] = self.get_links(soup)
@@ -274,15 +245,19 @@ class Content:
             self.feat_dict['content_use_http_link'] = self.use_http_link(soup)
 
         except Exception as e:
-            print(f'Error parsing HTML: {e}')
+            print(f'Content.py: Error parsing HTML: {e}')
             return {}
         
         return self.feat_dict
 
-# example = Content()
-# print(example.extract('https://www.google.com/search?q=dlak&sca_esv=5bdde8b43c3acd18&sca_upv=1&sxsrf=ACQVn0-kYdzzhYGRYlS3Vyp5NMnK3wKCrA%3A1708971628303&source=hp&ei=bNbcZaSMEPfdkPIPjci9mAI&iflsig=ANes7DEAAAAAZdzkfJkItMmjQG1EFyfk2IUnQ4wYw_0D&ved=0ahUKEwik8tW2z8mEAxX3LkQIHQ1kDyMQ4dUDCBc&uact=5&oq=dlak&gs_lp=Egdnd3Mtd2l6IgRkbGFrMgUQABiABDIFEAAYgAQyBRAAGIAEMgoQABiABBgKGLEDMgoQABiABBgKGLEDMg0QLhiABBgKGMcBGK8BMg0QABiABBgKGLEDGIMBMgoQABiABBgKGLEDMg0QABiABBgKGLEDGIMBMgcQABiABBgKSNwCUABYrQFwAHgAkAEAmAGpAaABtgSqAQMwLjS4AQPIAQD4AQGYAgSgAvIEwgIEECMYJ8ICChAjGIAEGIoFGCfCAgsQABiABBixAxiDAcICERAuGIAEGLEDGIMBGMcBGNEDwgIREC4YgwEY1AIYsQMYgAQYigXCAggQABiABBixA8ICERAuGIMBGK8BGMcBGLEDGIAEwgILEC4YgAQYxwEYrwHCAg0QLhiABBjHARjRAxgKmAMAkgcDMC40&sclient=gws-wiz'))
+# For testing purposes
+# async def run_example():
+#     async with aiohttp.ClientSession() as session:
+#         example = Content(session)
+#         await example.extract('http://www.blackgeeksofdragoncon.com')
+        
+#         for key, value in example.feat_dict.items():
+#             print(f"{key}: {type(value)}")
+#             print(value)
 
-# for keys in example.feat_dict:
-#     print(keys + " " + str(type(example.feat_dict[keys])))
-#     print(example.feat_dict[keys])
-#     print()
+# asyncio.run(run_example())
