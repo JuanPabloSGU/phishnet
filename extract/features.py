@@ -13,10 +13,8 @@ from artint.src.features.Lexical import Lexical
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
-from gathering.utils import preprocess_url
 
 # Initialize feature extractors
-content_extractor = Content()
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
@@ -66,26 +64,27 @@ def get_all_urls(es, index):
     return set(all_urls)
   
 # Function to extract all features from a URL
-async def extract_features(url_dicts):
-    semaphore = asyncio.Semaphore(50)
+async def extract_features(url_dicts, session):
+    semaphore = asyncio.Semaphore(20)
 
     async def extract_single_url(url_dict):
         async with semaphore:
             url = url_dict['url']
             type = url_dict['type']
+            content_extractor = Content(session)
             content_features = await content_extractor.extract(url)
             domain_features = domain_extractor.extract(url)
             lexical_features = lexical_extractor.extract(url)
             return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features}
 
     tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     return [result for result in results if result is not None]
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number):
+async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number, session):
     logging.info('Extracting features for batch number: %d', batch_number)
-    data = await extract_features(url_dicts_batch)
+    data = await extract_features(url_dicts_batch, session)
     actions = [
         {
             '_index': index,
@@ -123,25 +122,18 @@ async def main():
         for doc in raw_data if doc['_source']['url'] not in processed_urls}
     logging.info(f'Number of unprocessed URLs: {len(unprocessed_url_and_type)}')
 
-    batch_size = 1000
-    futures = []
+    batch_size = 100
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
-    async with aiohttp.ClientSession():
+    async with aiohttp.ClientSession() as session:
         # Process the unprocessed URLs in batches
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
             batch_index = i // batch_size + 1
-            task = asyncio.create_task(
-                process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index)
-            )
-            futures.append(task)
-
-        for future in asyncio.as_completed(futures):
             try:
-                await future
+                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session)
             except Exception as e:
-                logging.error(f"Error in task: {e}")
+                logging.error(f"Error processing batch {batch_index}: {e}", exc_info=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
