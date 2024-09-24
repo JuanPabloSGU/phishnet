@@ -23,8 +23,7 @@ class Content:
                         response.raise_for_status()
                         content = await response.read()
                         redirects = len(response.history)
-                        status = response.status
-                        return {'content': content, 'redirects': redirects, 'status': status}
+                        return {'content': content, 'redirects': redirects}
                 except aiohttp.ClientError as e:
                     retry_delay = 2**idx
                     print(f'\033[34mClientError for {url}. Retrying in {retry_delay} seconds.\033[0m')
@@ -227,9 +226,6 @@ class Content:
 
         try:
             content = response_data['content']
-            status = response_data['status']
-            print(f"Response Status: {status}")
-
             soup = BeautifulSoup(content, 'html.parser')
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
