@@ -10,23 +10,25 @@ logging.basicConfig(level=logging.INFO)
 from artint.src.features.Content import Content
 from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
+from artint.src.features.DOM import DOM
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-# Initialize feature extractors
+# Initialize feature extractors that don't require a session
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
+# Load environment variables from .env file
+logging.info('Loading environment variables')
+load_dotenv('.env')
+ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
+ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
+API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
+
 # Function to initialize Elasticsearch client
 def initialize_es_client():
-    # Load environment variables from .env file
-    logging.info('Loading environment variables')
-    load_dotenv('.env')
-    ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
-    ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
-    ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
-
     # Connect to Elasticsearch
     logging.info('Connecting to Elasticsearch')
     es_client = Elasticsearch(
@@ -62,20 +64,22 @@ def get_all_urls(es, index):
         all_urls += [hit['_source']['url'] for hit in response['hits']['hits']]
     logging.info('Retrieved %d urls from Elasticsearch index: %s', len(all_urls), index)
     return set(all_urls)
-  
+
 # Function to extract all features from a URL
 async def extract_features(url_dicts, session):
     semaphore = asyncio.Semaphore(20)
+    content_extractor = Content(session)
+    dom_extractor = DOM(session, API_KEY_URLSCAN)
 
     async def extract_single_url(url_dict):
         async with semaphore:
             url = url_dict['url']
             type = url_dict['type']
-            content_extractor = Content(session)
             content_features = await content_extractor.extract(url)
+            dom_features = await dom_extractor.extract(url)
             domain_features = domain_extractor.extract(url)
             lexical_features = lexical_extractor.extract(url)
-            return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features}
+            return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features, **dom_features}
 
     tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
     results = await asyncio.gather(*tasks, return_exceptions=True)

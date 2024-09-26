@@ -254,7 +254,7 @@ class Content:
 # async def run_example():
 #     async with aiohttp.ClientSession() as session:
 #         example = Content(session)
-#         await example.extract('http://www.blackgeeksofdragoncon.com')
+#         await example.extract('https://afmeldeninfo.com/unsubs-be-nee')
         
 #         for key, value in example.feat_dict.items():
 #             print(f"{key}: {type(value)}")
