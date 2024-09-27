@@ -19,16 +19,16 @@ from elasticsearch.helpers import bulk
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
-# Load environment variables from .env file
-logging.info('Loading environment variables')
-load_dotenv('.env')
-ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
-ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
-ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
 API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
 
 # Function to initialize Elasticsearch client
 def initialize_es_client():
+    # Load environment variables from .env file
+    logging.info('Loading environment variables')
+    load_dotenv('.env')
+    ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST')
+    ELASTICSEARCH_USER = os.getenv('ELASTICSEARCH_USER')
+    ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD')
     # Connect to Elasticsearch
     logging.info('Connecting to Elasticsearch')
     es_client = Elasticsearch(
