@@ -3,6 +3,7 @@ import os
 import aiohttp
 import asyncio
 import logging
+from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO)
 
@@ -109,43 +110,76 @@ class DOM:
         logging.error(f"Exceeded maximum retries ({retries}) for UUID {uuid} when fetching DOM snapshot.")
         return None
 
-    async def get_screenshot(self, uuid: str, retries: int):
-        url = f"https://urlscan.io/screenshots/{uuid}.png"
-        for idx in range(retries):
-            retry_delay = min(3**idx, 15)
-            logging.info(f"Attempt {idx + 1}/{retries}: Fetching screenshot for UUID {uuid}")
-            try:
-                async with self.session.get(url, timeout=15) as response:
-                    status = response.status
-                    match status:
-                        case 200:
-                            screenshot_content = await response.read()
-                            return screenshot_content
-                        case 404:
-                            # The screenshot is not ready yet; wait and retry
-                            await asyncio.sleep(retry_delay)
-                            continue
-                        case 429:
-                            logging.warning("Rate limited by urlscan.io when fetching screenshot.")
-                            return None
-                        case _:
-                            logging.error(f"Error fetching screenshot for UUID {uuid}: HTTP {response.status}")
-                            return None
-            except aiohttp.ClientError as e:
-                logging.error(f"Client error occurred when fetching screenshot for UUID {uuid}: {e}")
-                return None
-            except asyncio.TimeoutError:
-                logging.error(f"Request timed out when fetching screenshot for UUID {uuid}")
-                return None
-        logging.error(f"Exceeded maximum retries ({retries}) for UUID {uuid} when fetching screenshot.")
-        return None
-
     async def extract_dom_features(self, dom_content: str):
-        # Need helper functions for DOM feature extraction
-        from bs4 import BeautifulSoup
-
         soup = BeautifulSoup(dom_content, 'html.parser')
+
+        self.feat_dict['dom_total_nodes'] = self.get_total_nodes(soup)
+        self.feat_dict['dom_max_depth'] = self.get_max_depth(soup)
+        self.feat_dict['dom_average_depth'] = self.get_average_depth(soup)
+        self.feat_dict['dom_unique_tags'] = self.get_unique_tags(soup)
+        self.feat_dict['dom_num_comments'] = self.get_num_comments(soup)
+        self.feat_dict['dom_has_canvas'] = self.has_element(soup, 'canvas')
+        self.feat_dict['dom_has_video'] = self.has_element(soup, 'video')
+        self.feat_dict['dom_has_audio'] = self.has_element(soup, 'audio')
+        self.feat_dict['dom_total_attributes'] = self.get_total_attributes(soup)
+        self.feat_dict['dom_average_attributes'] = self.get_average_attributes(soup)
+        self.feat_dict['dom_inline_event_handlers'] = self.get_inline_event_handlers(soup)
+        self.feat_dict['dom_deprecated_tags_used'] = self.get_deprecated_tags_used(soup)
         self.feat_dict['dom_num_script_tags'] = len(soup.find_all('script'))
+
+    def get_total_nodes(self, soup):
+        return len(soup.find_all())
+
+    def get_max_depth(self, soup):
+        def helper(node, current_depth=0):
+            if not hasattr(node, 'contents') or not node.contents:
+                return current_depth
+            else:
+                return max(helper(child, current_depth + 1) for child in node.contents if hasattr(child, 'name'))
+        return helper(soup)
+
+    def get_average_depth(self, soup):
+        depths = []
+
+        def helper(node, current_depth=0):
+            if hasattr(node, 'contents') and node.contents:
+                for child in node.contents:
+                    if hasattr(child, 'name'):
+                        depths.append(current_depth + 1)
+                        helper(child, current_depth + 1)
+
+        helper(soup)
+        return sum(depths) / len(depths) if depths else 0
+
+    def get_unique_tags(self, soup):
+        tags = {tag.name for tag in soup.find_all()}
+        return len(tags)
+
+    def get_num_comments(self, soup):
+        comments = soup.find_all(string=lambda text: isinstance(text, type(soup.comment)))
+        return len(comments)
+
+    def has_element(self, soup, tag_name):
+        return 1 if soup.find(tag_name) else 0
+
+    def get_total_attributes(self, soup):
+        return sum(len(tag.attrs) for tag in soup.find_all())
+
+    def get_average_attributes(self, soup):
+        total_attributes = self.get_total_attributes(soup)
+        total_elements = len(soup.find_all())
+        return total_attributes / total_elements if total_elements else 0
+
+    def get_inline_event_handlers(self, soup):
+        inline_events = ['onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout', 'onkeydown', 'onkeyup']
+        return sum(
+            1 for tag in soup.find_all() for attr in inline_events if attr in tag.attrs
+        )
+
+    def get_deprecated_tags_used(self, soup):
+        deprecated_tags = ['applet', 'basefont', 'center', 'dir', 'font', 'frame', 'frameset',
+                           'isindex', 'menu', 'noframes', 's', 'strike', 'u']
+        return sum(1 for tag in deprecated_tags if soup.find(tag))
 
     async def extract(self, url: str):
         self.feat_dict['url'] = url
@@ -169,13 +203,8 @@ class DOM:
                 logging.error(f"No DOM content obtained for UUID {uuid}")
                 return {}
 
-            screenshot_content = await self.get_screenshot(uuid, retries=3)
-            if not screenshot_content:
-                logging.error(f"No screenshot content obtained for UUID {uuid}")
-                return {}
-
             await self.extract_dom_features(dom_content)
-            self.feat_dict['screenshot'] = screenshot_content
+            self.feat_dict['dom_screenshot_url'] = f"https://urlscan.io/screenshots/{uuid}.png"
 
             return self.feat_dict
 
