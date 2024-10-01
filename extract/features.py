@@ -19,6 +19,7 @@ from elasticsearch.helpers import bulk
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
+load_dotenv('.env')
 API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
 
 # Function to initialize Elasticsearch client
@@ -73,12 +74,23 @@ async def extract_features(url_dicts, session):
 
     async def extract_single_url(url_dict):
         async with semaphore:
-            url = url_dict['url']
+            url = url_dict['url'].rstrip('/')
             type = url_dict['type']
-            content_features = await content_extractor.extract(url)
-            dom_features = await dom_extractor.extract(url)
-            domain_features = domain_extractor.extract(url)
-            lexical_features = lexical_extractor.extract(url)
+
+            # Asynchronous extractors
+            content_task = content_extractor.extract(url)
+            dom_task = dom_extractor.extract(url)
+
+            # Synchronous extractors
+            domain_task = asyncio.to_thread(domain_extractor.extract(url))
+            lexical_task = asyncio.to_thread(lexical_extractor.extract(url))
+
+            content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
+                content_task,
+                dom_task,
+                domain_task,
+                lexical_task
+            )
             return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features, **dom_features}
 
     tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
