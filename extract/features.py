@@ -20,9 +20,6 @@ from elasticsearch.helpers import bulk
 domain_extractor = Domain()
 lexical_extractor = Lexical()
 
-load_dotenv('.env')
-API_KEY_URLSCAN = os.getenv('URLSCAN_API_KEY')
-
 # Function to initialize Elasticsearch client
 def initialize_es_client():
     # Load environment variables from .env file
