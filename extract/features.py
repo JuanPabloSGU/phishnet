@@ -11,6 +11,7 @@ from artint.src.features.Content import Content
 from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from artint.src.features.DOM import DOM
+from artint.src.features.ApiKeyManager import ApiKeyManager
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
@@ -67,10 +68,10 @@ def get_all_urls(es, index):
     return set(all_urls)
 
 # Function to extract all features from a URL
-async def extract_features(url_dicts, session):
+async def extract_features(url_dicts, session, api_key_manager):
     semaphore = asyncio.Semaphore(20)
     content_extractor = Content(session)
-    dom_extractor = DOM(session, API_KEY_URLSCAN)
+    dom_extractor = DOM(session, api_key_manager)
 
     async def extract_single_url(url_dict):
         async with semaphore:
@@ -98,9 +99,9 @@ async def extract_features(url_dicts, session):
     return [result for result in results if result is not None]
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number, session):
+async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number, session, api_key_manager):
     logging.info('Extracting features for batch number: %d', batch_number)
-    data = await extract_features(url_dicts_batch, session)
+    data = await extract_features(url_dicts_batch, session, api_key_manager)
     actions = [
         {
             '_index': index,
@@ -141,13 +142,16 @@ async def main():
     batch_size = 100
     unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
 
+    API_KEYS_URLSCAN = os.getenv('URLSCAN_API_KEY').split(',')
+    api_key_manager = ApiKeyManager(API_KEYS_URLSCAN)
+
     async with aiohttp.ClientSession() as session:
         # Process the unprocessed URLs in batches
         for i in range(0, len(unprocessed_url_and_type_list), batch_size):
             batch = unprocessed_url_and_type_list[i:i+batch_size]
             batch_index = i // batch_size + 1
             try:
-                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session)
+                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager)
             except Exception as e:
                 logging.error(f"Error processing batch {batch_index}: {e}", exc_info=True)
 
