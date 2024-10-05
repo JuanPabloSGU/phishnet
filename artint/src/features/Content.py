@@ -30,7 +30,7 @@ class Content:
                     return {'content': content, 'redirects': redirects}
             except aiohttp.ClientError:
                 retry_delay = 2**idx
-                logging.exception(f'Content.py: ClientError for {url}. Retrying in {retry_delay} seconds.')
+                logging.error(f'Content.py: ClientError for {url}. Retrying in {retry_delay} seconds.')
                 await asyncio.sleep(retry_delay)
             except Exception:
                 logging.error(f'Content.py: Error making request for url: {url}')
