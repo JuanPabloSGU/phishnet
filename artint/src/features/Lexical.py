@@ -3,6 +3,9 @@ from urllib.parse import urlparse
 from math import log2
 import re
 from ipaddress import ip_address
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # feature overlap can cause false positive since higher weight
 
@@ -37,6 +40,7 @@ class Lexical:
 
         self.feat_dict['lexical_shannon_entropy_url'] = Lexical.shannon_entropy(url)
 
+        logging.info(f'Lexical.py: Successfully returned lexical features for url: {url}')
         return self.feat_dict
 
     @staticmethod # helper method for computing the ratio between 2 components (either int or str); e.g., ratio between netloc and url. 

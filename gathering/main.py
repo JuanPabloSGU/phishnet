@@ -11,8 +11,8 @@ from asyncio import Semaphore, Lock
 
 # Function to fetch and index urls
 async def fetch_and_index_urls(es_client, session, source, index, stream, type, is_url):
-    # Initialize a semaphore to limit the number of concurrent tasks to 50
-    semaphore = Semaphore(50)
+    # Initialize a semaphore to limit the number of concurrent tasks to 100
+    semaphore = Semaphore(100)
     batch_size = 1000
     actions_lock = Lock()
     actions = []
@@ -109,10 +109,10 @@ async def main():
                 es_client.indices.create(index=TARGET_INDEX)
 
             # One time use in case the database is cleared and we need to re-import the data
-            logging.info("Loading 'PhiUSIIL - benign.txt' into Elasticsearch, skipping search due to empty index.")
+            logging.info("Processing benign URLs from 'PhiUSIIL - benign.txt'")
             await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - benign.txt', TARGET_INDEX, False, 0, False)
             
-            logging.info("Processing benign URLs for 'PhiUSIIL - malicious.txt'")
+            logging.info("Processing malicious URLs from 'PhiUSIIL - malicious.txt'")
             await fetch_and_index_urls(es_client, session, 'backups/PhiUSIIL - malicious.txt', TARGET_INDEX, False, 1, False)
 
             logging.info("Processing benign URLs for 'benign-top-1000000-1.txt'")

@@ -57,7 +57,7 @@ async def preprocess_url(session, url):
             response = await session.head(https_url, headers=headers, timeout=15, allow_redirects=True)
             if response.status < 400:
                 logging.info(f"HTTPS addition was valid: {https_url}")
-                return https_url
+                return https_url.rstrip('/')
             else:
                 http_url = 'http://' + url
         except Exception as e:
@@ -71,7 +71,7 @@ async def preprocess_url(session, url):
         response = await session.head(http_url, headers=headers, timeout=15, allow_redirects=True)
         if response.status < 400:
             logging.info(f"URL validated: {http_url}")
-            return http_url
+            return http_url.rstrip('/')
         else:
             logging.warning(f"URL skipped: {http_url} - Received status code: {response.status}")
             return None
