@@ -2,10 +2,13 @@ import sys
 import os
 import aiohttp
 import asyncio
+import logging
 from bs4 import BeautifulSoup
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from gathering.utils import generate_user_agent
+
+logging.basicConfig(level=logging.INFO)
 
 class Content:
     def __init__(self, session: aiohttp.ClientSession) -> None:
@@ -25,14 +28,14 @@ class Content:
                     content = await response.read()
                     redirects = len(response.history)
                     return {'content': content, 'redirects': redirects}
-            except aiohttp.ClientError as e:
+            except aiohttp.ClientError:
                 retry_delay = 2**idx
-                print(f'ClientError for {url}. Retrying in {retry_delay} seconds.')
+                logging.exception(f'Content.py: ClientError for {url}. Retrying in {retry_delay} seconds.')
                 await asyncio.sleep(retry_delay)
-            except Exception as e:
-                print(f'Error making request for {url}: {e}')
+            except Exception:
+                logging.error(f'Content.py: Error making request for url: {url}')
                 return None
-        print(f'Failed to make request after {retries} retries.')
+        logging.error(f'Content.py: Failed to make request after {retries} retries.')
         return None
     
     def get_links(self, soup: BeautifulSoup) -> int:
@@ -221,7 +224,7 @@ class Content:
             if response_data is None:
                 return {}
             self.feat_dict['content_redirects'] = response_data['redirects']
-        except Exception as e:
+        except Exception:
             print(f'Content.py: Error making request: {e}')
             return {}
 
@@ -244,10 +247,11 @@ class Content:
             self.feat_dict['content_use_download'] = self.use_download(soup)
             self.feat_dict['content_use_http_link'] = self.use_http_link(soup)
 
-        except Exception as e:
-            print(f'Content.py: Error parsing HTML: {e}')
+        except Exception:
+            logging.error(f'Content.py: Error parsing HTML for url: {url}')
             return {}
         
+        logging.info(f'Content.py: Successfully returned Content features for url: {url}')
         return self.feat_dict
 
 # For testing purposes

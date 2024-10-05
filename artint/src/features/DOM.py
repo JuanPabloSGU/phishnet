@@ -3,13 +3,19 @@ import os
 import aiohttp
 import asyncio
 import logging
-import ApiKeyManager
 from bs4 import BeautifulSoup
+from aiohttp import ClientTimeout
+
+# Add the base directory 'phishnet' to sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+phishnet_dir = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+if phishnet_dir not in sys.path:
+    sys.path.append(phishnet_dir)
+
+from artint.src.features.ApiKeyManager import ApiKeyManager
+from gathering.utils import generate_user_agent
 
 logging.basicConfig(level=logging.INFO)
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-from gathering.utils import generate_user_agent
 
 class DOM:
     def __init__(self, session: aiohttp.ClientSession, api_key_manager: ApiKeyManager) -> None:
@@ -22,7 +28,7 @@ class DOM:
         while True:
             api_key = await self.api_key_manager.get_api_key()
             if api_key is None:
-                logging.error("No available API keys to submit URL: %s", url)
+                logging.error("DOM.py: No available API keys to submit URL: %s", url)
                 return None
 
             headers = {
@@ -32,37 +38,47 @@ class DOM:
             }
 
             data = {"url": url, "visibility": "public"}
-            async with self.session.post("https://urlscan.io/api/v1/scan/", headers=headers, json=data, timeout=15) as response:
-                status = response.status
-                match status:
-                    case 200:
-                        try:
-                            response_json = await response.json()
-                            uuid = response_json["uuid"]
-                            return uuid
-                        except KeyError:
-                            logging.error(f"'uuid' key not found in response for URL: {url}")
+            try:
+                async with self.session.post("https://urlscan.io/api/v1/scan/", headers=headers, json=data, timeout=ClientTimeout(total=15)) as response:
+                    status = response.status
+                    match status:
+                        case 200:
+                            try:
+                                response_json = await response.json()
+                                uuid = response_json["uuid"]
+                                return uuid
+                            except KeyError:
+                                logging.error(f"DOM.py: 'uuid' key not found in response for URL: {url}")
+                                return None
+                            except Exception:
+                                logging.error(f"DOM.py: URL skipped: {url} - Unexpected exception occurred")
+                                return None
+                        case 400:
+                            logging.warning(f"DOM.py: Skipping {url}, urlscan.io cannot process this URL.")
                             return None
-                        except Exception as e:
-                            logging.error(f"DOM.py: URL skipped: {url} - Unexpected exception occurred: {e}")
+                        case 429:
+                            logging.warning(f"DOM.py: Rate limited by urlscan.io when submitting URL: {url}")
+                            await self.api_key_manager.mark_rate_limited(api_key)
+                            continue  # Try with another API key
+                        case _:
+                            logging.error(f"DOM.py: Unexpected status code {response.status} when submitting URL: {url}")
                             return None
-                    case 400:
-                        logging.warning(f"Skipping {url}, urlscan.io cannot process this URL.")
-                        return None
-                    case 429:
-                        logging.warning(f"Rate limited by urlscan.io when submitting URL: {url}")
-                        await self.api_key_manager.mark_rate_limited(api_key)
-                        continue # Try with another API key
-                    case _:
-                        logging.error(f"Unexpected status code {response.status} when submitting URL: {url}")
-                        return None
+            except asyncio.TimeoutError:
+                logging.error(f"DOM.py: Request timed out when submitting URL: {url}")
+                return None
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when submitting URL {url}")
+                return None
+            except Exception:
+                logging.error(f"DOM.py: Unexpected error occurred when submitting URL {url}")
+                return None
 
     async def get_result(self, uuid: str, retries: int):
         url = f"https://urlscan.io/api/v1/result/{uuid}/"
         for idx in range(retries):
             api_key = await self.api_key_manager.get_api_key()
             if api_key is None:
-                logging.error("No available API keys to fetch result for UUID: %s", uuid)
+                logging.error("DOM.py: No available API keys to fetch result for UUID: %s", uuid)
                 return None
 
             headers = {
@@ -71,9 +87,9 @@ class DOM:
             }
 
             retry_delay = min(3**idx, 15)
-            logging.info(f"Attempt {idx + 1}/{retries}: Fetching result for UUID {uuid}")
+            logging.info(f"DOM.py: Attempt {idx + 1}/{retries}: Fetching result for UUID {uuid}")
             try:
-                async with self.session.get(url, headers=headers, timeout=15) as response:
+                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=15)) as response:
                     status = response.status
                     if status == 200:
                         result = await response.json()
@@ -83,19 +99,19 @@ class DOM:
                         await asyncio.sleep(retry_delay)
                         continue
                     elif status == 429:
-                        logging.warning("Rate limited by urlscan.io when fetching result.")
+                        logging.warning("DOM.py: Rate limited by urlscan.io when fetching result.")
                         await self.api_key_manager.mark_rate_limited(api_key)
                         continue  # Try with another API key
                     else:
-                        logging.error(f"Error fetching result for UUID {uuid}: HTTP {response.status}")
+                        logging.error(f"DOM.py: Error fetching result for UUID {uuid}: HTTP {response.status}")
                         return None
-            except aiohttp.ClientError as e:
-                logging.error(f"Client error occurred when fetching result for UUID {uuid}: {e}")
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when fetching result for UUID {uuid}")
                 return None
             except asyncio.TimeoutError:
-                logging.error(f"Request timed out when fetching result for UUID {uuid}")
+                logging.error(f"DOM.py: Request timed out when fetching result for UUID {uuid}")
                 return None
-        logging.error(f"Exceeded maximum retries ({retries}) for UUID {uuid}.")
+        logging.error(f"DOM.py: Exceeded maximum retries ({retries}) for UUID {uuid}.")
         return None
 
     async def get_dom_snapshot(self, uuid: str, retries: int):
@@ -103,7 +119,7 @@ class DOM:
         for idx in range(retries):
             api_key = await self.api_key_manager.get_api_key()
             if api_key is None:
-                logging.error("No available API keys to fetch DOM snapshot for UUID: %s", uuid)
+                logging.error("DOM.py: No available API keys to fetch DOM snapshot for UUID: %s", uuid)
                 return None
 
             headers = {
@@ -112,9 +128,9 @@ class DOM:
             }
 
             retry_delay = min(3**idx, 15)
-            logging.info(f"Attempt {idx + 1}/{retries}: Fetching DOM snapshot for UUID {uuid}")
+            logging.info(f"DOM.py: Attempt {idx + 1}/{retries}: Fetching DOM snapshot for UUID {uuid}")
             try:
-                async with self.session.get(url, headers=headers, timeout=15) as response:
+                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=15)) as response:
                     status = response.status
                     if status == 200:
                         dom_content = await response.text()
@@ -124,19 +140,19 @@ class DOM:
                         await asyncio.sleep(retry_delay)
                         continue
                     elif status == 429:
-                        logging.warning("Rate limited by urlscan.io when fetching DOM snapshot.")
+                        logging.warning("DOM.py: Rate limited by urlscan.io when fetching DOM snapshot.")
                         await self.api_key_manager.mark_rate_limited(api_key)
                         continue  # Try with another API key
                     else:
-                        logging.error(f"Error fetching DOM snapshot for UUID {uuid}: HTTP {response.status}")
+                        logging.error(f"DOM.py: Error fetching DOM snapshot for UUID {uuid}: HTTP {response.status}")
                         return None
-            except aiohttp.ClientError as e:
-                logging.error(f"Client error occurred when fetching DOM snapshot for UUID {uuid}: {e}")
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when fetching DOM snapshot for UUID {uuid}")
                 return None
             except asyncio.TimeoutError:
-                logging.error(f"Request timed out when fetching DOM snapshot for UUID {uuid}")
+                logging.error(f"DOM.py: Request timed out when fetching DOM snapshot for UUID {uuid}")
                 return None
-        logging.error(f"Exceeded maximum retries ({retries}) for UUID {uuid} when fetching DOM snapshot.")
+        logging.error(f"DOM.py: Exceeded maximum retries ({retries}) for UUID {uuid} when fetching DOM snapshot.")
         return None
 
     async def extract_dom_features(self, dom_content: str):
@@ -217,41 +233,27 @@ class DOM:
             if not uuid:
                 logging.error(f"DOM.py: Failed to submit URL: {url}")
                 return {}
-            logging.info(f"Submitted URL: {url}, UUID: {uuid}")
+            logging.info(f"DOM.py: Submitted URL: {url}, UUID: {uuid}")
 
             # Waiting 5 seconds before checking the result
             await asyncio.sleep(5)
 
             result = await self.get_result(uuid, retries=3)
             if not result:
-                logging.error(f"No result obtained for UUID {uuid}")
+                logging.error(f"DOM.py: No result obtained for UUID {uuid}")
                 return {}
 
             dom_content = await self.get_dom_snapshot(uuid, retries=3)
             if not dom_content:
-                logging.error(f"No DOM content obtained for UUID {uuid}")
+                logging.error(f"DOM.py: No DOM content obtained for UUID {uuid}")
                 return {}
 
             await self.extract_dom_features(dom_content)
             self.feat_dict['dom_screenshot_url'] = f"https://urlscan.io/screenshots/{uuid}.png"
 
+            logging.info(f'DOM.py: Successfully returned DOM features for url: {url}')
             return self.feat_dict
 
-        except Exception as e:
-            logging.error(f"DOM.py: Error processing URL {url}: {e}", exc_info=True)
+        except Exception:
+            logging.error(f"DOM.py: Error processing URL {url}", exc_info=True)
             return {}
-
-# For testing purposes
-# async def run_example():
-#     # Paste your API key here (don't commit to GitHub)
-#     API_KEY_URLSCAN = ''
-
-#     async with aiohttp.ClientSession() as session:
-#         example = DOM(session, API_KEY_URLSCAN)
-#         url = 'https://account.sunantamadaan.com'
-#         features = await example.extract(url)
-
-#         for key, value in features.items():
-#             print(f"{key}: {value}")
-
-# asyncio.run(run_example())

@@ -80,8 +80,8 @@ async def extract_features(url_dicts, session, api_key_manager):
             dom_task = dom_extractor.extract(url)
 
             # Synchronous extractors
-            domain_task = asyncio.to_thread(domain_extractor.extract(url))
-            lexical_task = asyncio.to_thread(lexical_extractor.extract(url))
+            domain_task = asyncio.to_thread(domain_extractor.extract, url)
+            lexical_task = asyncio.to_thread(lexical_extractor.extract, url)
 
             content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
                 content_task,
@@ -93,7 +93,8 @@ async def extract_features(url_dicts, session, api_key_manager):
 
     tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    return [result for result in results if result is not None]
+    valid_results = [result for result in results if not isinstance(result, Exception)]
+    return valid_results
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
 async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number, session, api_key_manager):

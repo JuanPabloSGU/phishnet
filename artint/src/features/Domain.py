@@ -1,6 +1,9 @@
 import whois
 import tldextract
+import logging
 from typing import Union
+
+logging.basicConfig(level=logging.INFO)
 
 class Domain:
     def __init__(self) -> None:
@@ -96,10 +99,11 @@ class Domain:
             self.feat_dict['updated_date'] = Domain.get_updated_date(w)
             self.feat_dict['domain_dnssec'] = Domain.get_dnssec(w)
 
-        except Exception as e:
-            print(f'Error making request: {e}')
+        except Exception:
+            logging.error(f'Domain.py: Error making request on url: {url}')
             return {}
         
+        logging.info(f'Domain.py: Successfully returned domain features for url: {url}')
         return self.feat_dict
 
 # example = Domain()
