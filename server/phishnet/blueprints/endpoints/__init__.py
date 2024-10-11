@@ -64,7 +64,7 @@ class UserResource(Resource):
     def get(self):
         verify_jwt_in_request(locations=['headers'])
         current_user = get_jwt()
-        return {'message': f'Hello, {current_user["name"]}!'}
+        return {'msg': f'Hello, {current_user["name"]}!'}
 
 
 api.add_resource(UserResource, '/user')
