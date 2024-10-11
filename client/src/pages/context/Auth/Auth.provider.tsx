@@ -15,10 +15,12 @@ const useAuth: () => TAuth = () => useContext(AuthContext);
 const AuthProvider: React.FC<{ children: ReactElement }> = (
   { children }: { children: ReactNode },
 ) => {
+
   const config: ZitadelConfig = {
     authority: "https://zitadel.databending.ca",
     client_id: "287272511991840275",
-    redirect_uri: "http://localhost:5173/login/callback",
+    redirect_uri: `${location.origin}/login/callback`,
+    post_logout_redirect_uri: `${location.origin}/`,
   };
 
   const zitadel = createZitadelAuth(config);

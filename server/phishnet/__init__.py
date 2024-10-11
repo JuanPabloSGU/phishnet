@@ -4,7 +4,6 @@ from flasgger import Swagger
 from .blueprints.endpoints import blueprint as endpoints
 from flask_jwt_extended import JWTManager
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_pyfile('config.py')
