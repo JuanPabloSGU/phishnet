@@ -72,6 +72,15 @@ api.add_resource(UserResource, '/user')
 
 class ElasticsearchResource(Resource):
     @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            }
+        ],
         'responses': {
             200: {
                 'description': 'Hello, ElasticSearch!',
@@ -197,6 +206,13 @@ class LogisticalRegression(Resource):
                 'in': 'formData',
                 'type': 'string',
                 'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
             }
         ],
         'responses': {
@@ -264,6 +280,13 @@ class RandomForest(Resource):
                 'in': 'formData',
                 'type': 'string',
                 'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
             }
         ],
         'responses': {
@@ -329,6 +352,13 @@ class MLPResource(Resource):
                 'name': 'url',
                 'description': 'URL to extract lexical features from.',
                 'in': 'formData',
+                'type': 'string',
+                'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
                 'type': 'string',
                 'required': True
             }
