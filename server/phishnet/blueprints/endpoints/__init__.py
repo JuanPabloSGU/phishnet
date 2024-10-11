@@ -36,6 +36,39 @@ class HelloWorldResource(Resource):
 
 api.add_resource(HelloWorldResource, '/hello_world')
 
+class UserResource(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Hello, User!',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def get(self):
+        verify_jwt_in_request(locations=['headers'])
+        current_user = get_jwt()
+        return {'message': f'Hello, {current_user["name"]}!'}
+
+
+api.add_resource(UserResource, '/user')
+
 
 class ElasticsearchResource(Resource):
     @ swag_from({
