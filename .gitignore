@@ -12,3 +12,4 @@ artint/src/setbuilder/mlflow.db
 artint/src/common/*
 artint/src/common/*
 !artint/src/common/deep_preprocessing.ipynb
+!artint/src/common/phishformer.ipynb
