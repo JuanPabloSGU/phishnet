@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 class ApiKeyManager:
-    def __init__(self, api_keys, rate_limit_reset_time=3600):
+    def __init__(self, api_keys, rate_limit_reset_time=60):
         self.api_keys = api_keys
         self.current_index = 0
         self.lock = asyncio.Lock()

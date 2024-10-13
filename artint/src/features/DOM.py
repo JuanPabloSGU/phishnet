@@ -39,7 +39,7 @@ class DOM:
 
             data = {"url": url, "visibility": "public"}
             try:
-                async with self.session.post("https://urlscan.io/api/v1/scan/", headers=headers, json=data, timeout=ClientTimeout(total=15)) as response:
+                async with self.session.post("https://urlscan.io/api/v1/scan/", headers=headers, json=data, timeout=ClientTimeout(total=60)) as response:
                     status = response.status
                     match status:
                         case 200:
@@ -89,7 +89,7 @@ class DOM:
             retry_delay = min(3**idx, 15)
             logging.info(f"DOM.py: Attempt {idx + 1}/{retries}: Fetching result for UUID {uuid}")
             try:
-                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=15)) as response:
+                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=60)) as response:
                     status = response.status
                     if status == 200:
                         result = await response.json()
@@ -130,7 +130,7 @@ class DOM:
             retry_delay = min(3**idx, 15)
             logging.info(f"DOM.py: Attempt {idx + 1}/{retries}: Fetching DOM snapshot for UUID {uuid}")
             try:
-                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=15)) as response:
+                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=60)) as response:
                     status = response.status
                     if status == 200:
                         dom_content = await response.text()
@@ -238,12 +238,12 @@ class DOM:
             # Waiting 5 seconds before checking the result
             await asyncio.sleep(5)
 
-            result = await self.get_result(uuid, retries=3)
+            result = await self.get_result(uuid, retries=5)
             if not result:
                 logging.error(f"DOM.py: No result obtained for UUID {uuid}")
                 return {}
 
-            dom_content = await self.get_dom_snapshot(uuid, retries=3)
+            dom_content = await self.get_dom_snapshot(uuid, retries=5)
             if not dom_content:
                 logging.error(f"DOM.py: No DOM content obtained for UUID {uuid}")
                 return {}
