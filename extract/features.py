@@ -118,7 +118,7 @@ async def extract_single_url(doc, processed_ids, semaphore, session, api_key_man
 
 # Function to extract features from a batch of URLs
 async def extract_features(docs_batch, processed_ids, session, api_key_manager):
-    semaphore = asyncio.Semaphore(30)
+    semaphore = asyncio.Semaphore(60)
 
     tasks = [
         extract_single_url(doc, processed_ids, semaphore, session, api_key_manager)

@@ -24,6 +24,28 @@ class DOM:
         self.user_agent = generate_user_agent()
         self.feat_dict = {}
 
+    def initialize_feat_dict(self, url):
+        self.feat_dict = {'url': url}
+        feature_names = [
+            'dom_total_nodes',
+            'dom_max_depth',
+            'dom_average_depth',
+            'dom_unique_tags',
+            'dom_num_comments',
+            'dom_has_canvas',
+            'dom_has_video',
+            'dom_has_audio',
+            'dom_total_attributes',
+            'dom_average_attributes',
+            'dom_inline_event_handlers',
+            'dom_deprecated_tags_used',
+            'dom_num_script_tags',
+            'dom_screenshot_url'
+        ]
+        for feature in feature_names:
+            # Initialize 'dom_screenshot_url' as an empty string, others as -1
+            self.feat_dict[feature] = -1 if feature != 'dom_screenshot_url' else ''
+
     async def submit_url(self, url: str):
         while True:
             api_key = await self.api_key_manager.get_api_key()
@@ -227,12 +249,12 @@ class DOM:
         return sum(1 for tag in deprecated_tags if soup.find(tag))
 
     async def extract(self, url: str):
-        self.feat_dict['url'] = url
+        self.initialize_feat_dict(url)
         try:
             uuid = await self.submit_url(url)
             if not uuid:
                 logging.error(f"DOM.py: Failed to submit URL: {url}")
-                return {}
+                return self.feat_dict
             logging.info(f"DOM.py: Submitted URL: {url}, UUID: {uuid}")
 
             # Waiting 5 seconds before checking the result
@@ -241,12 +263,12 @@ class DOM:
             result = await self.get_result(uuid, retries=5)
             if not result:
                 logging.error(f"DOM.py: No result obtained for UUID {uuid}")
-                return {}
+                return self.feat_dict
 
             dom_content = await self.get_dom_snapshot(uuid, retries=5)
             if not dom_content:
                 logging.error(f"DOM.py: No DOM content obtained for UUID {uuid}")
-                return {}
+                return self.feat_dict
 
             await self.extract_dom_features(dom_content)
             self.feat_dict['dom_screenshot_url'] = f"https://urlscan.io/screenshots/{uuid}.png"
@@ -256,4 +278,4 @@ class DOM:
 
         except Exception:
             logging.error(f"DOM.py: Error processing URL {url}", exc_info=True)
-            return {}
+            return self.feat_dict
