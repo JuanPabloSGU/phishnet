@@ -20,6 +20,29 @@ class Content:
         }
         self.feat_dict = {}
 
+    def initialize_feat_dict(self, url):
+        self.feat_dict = {'url': url}
+        feature_names = [
+            'content_redirects',
+            'content_len_html',
+            'content_len_text',
+            'content_len_links',
+            'content_len_mail_usage_forms',
+            'content_meta_script_link_percentage',
+            'content_mouseover_changes',
+            'content_right_click_disabled',
+            'content_keyboard_shortcuts_disabled',
+            'content_copy_paste_disabled',
+            'content_drag_drop_disabled',
+            'content_popup_window_has_text_field',
+            'content_use_iframe',
+            'content_use_upload',
+            'content_use_download',
+            'content_use_http_link'
+        ]
+        for feature in feature_names:
+            self.feat_dict[feature] = -1
+
     async def make_request(self, url: str, timeout: int, retries: int):
         for idx in range(retries):
             try:
@@ -45,7 +68,7 @@ class Content:
         try:
             return len(soup.find_all('a'))
         except:
-            return None
+            return -1
 
     def get_mail_usage_form(self, soup: BeautifulSoup) -> int:
         """
@@ -59,7 +82,7 @@ class Content:
                     return 1
             return 0
         except:
-            return 0
+            return -1
 
     def meta_script_link_percentage(self, soup: BeautifulSoup) -> tuple[float, float, float]:
         """
@@ -84,7 +107,7 @@ class Content:
 
             return str(meta_percentage) + ", " + str(script_percentage) + ", " + str(link_percentage)
         except:
-            return None
+            return "-1, -1, -1"
 
     def get_mouseover_changes(self, soup: BeautifulSoup) -> int:
         """
@@ -97,7 +120,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def get_right_click_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -109,7 +132,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def get_keyboard_shortcuts_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -121,7 +144,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def get_copy_paste_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -133,7 +156,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def get_drag_drop_disabled(self, soup: BeautifulSoup) -> int:
         """
@@ -145,7 +168,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def popup_window_has_text_field(self, soup: BeautifulSoup) -> int:
         """
@@ -158,7 +181,7 @@ class Content:
                     return 1
             return 0
         except:
-            return None
+            return -1
 
     def use_iframe(self, soup: BeautifulSoup) -> int:
         """
@@ -170,7 +193,7 @@ class Content:
                 return 1
             return 0
         except:
-            return None
+            return -1
 
     def use_upload(self, soup: BeautifulSoup) -> int:
         """
@@ -182,7 +205,7 @@ class Content:
                 return 1
             return 0
         except:
-            return None
+            return -1
     
     def use_download(self, soup: BeautifulSoup) -> int:
         """
@@ -198,7 +221,7 @@ class Content:
                         return 1
             return 0
         except:
-            return None
+            return -1
 
     def use_http_link(self, soup: BeautifulSoup) -> int:
         """
@@ -213,20 +236,20 @@ class Content:
                         return 1
             return 0
         except:
-            return None
+            return -1
 
 
     async def extract(self, url):
-        self.feat_dict['url'] = url
+        self.initialize_feat_dict(url)
 
         try:
             response_data = await self.make_request(url, timeout=15, retries=3)
             if response_data is None:
-                return {}
+                return self.feat_dict
             self.feat_dict['content_redirects'] = response_data['redirects']
         except Exception:
-            print(f'Content.py: Error making request: {e}')
-            return {}
+            print(f'Content.py: Error making request')
+            return self.feat_dict
 
         try:
             content = response_data['content']
@@ -249,7 +272,7 @@ class Content:
 
         except Exception:
             logging.error(f'Content.py: Error parsing HTML for url: {url}')
-            return {}
+            return self.feat_dict
         
         logging.info(f'Content.py: Successfully returned Content features for url: {url}')
         return self.feat_dict

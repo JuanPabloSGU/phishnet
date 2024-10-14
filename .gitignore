@@ -5,3 +5,4 @@ artint/data/
 /gathering/__pycache__
 venv
 *.env
+.vscode

@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import hashlib
 import logging
 import os
 import sys
@@ -14,11 +15,17 @@ from artint.src.features.DOM import DOM
 from artint.src.features.ApiKeyManager import ApiKeyManager
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk
+from elasticsearch.helpers import bulk, BulkIndexError
 
-# Initialize feature extractors that don't require a session
-domain_extractor = Domain()
-lexical_extractor = Lexical()
+feature_extractors = ['Content', 'Domain', 'Lexical', 'DOM']
+successes = {extractor: 0 for extractor in feature_extractors}
+failures = {extractor: 0 for extractor in feature_extractors}
+
+def check_failure(feature_dict):
+    total_features = len(feature_dict)
+    failed_features = sum(1 for value in feature_dict.values() if value == -1 or value == "-1")
+    
+    return failed_features >= total_features / 2
 
 # Function to initialize Elasticsearch client
 def initialize_es_client():
@@ -52,65 +59,138 @@ def get_es_index(es, index):
     finally:
         es.clear_scroll(scroll_id=response['_scroll_id'])
 
-# Function to get all URLs from an Elasticsearch index
-def get_all_urls(es, index):
-    logging.info('Getting all urls from Elasticsearch index: %s', index)
-    query = {"_source": ["url"], "query": {"match_all": {}}}
+# Function to get all URL IDs (hashes) from an Elasticsearch index
+def get_all_ids(es, index):
+    logging.info('Getting all ids from Elasticsearch index: %s', index)
+    query = {"stored_fields": [], "query": {"match_all": {}}}
     response = es.search(index=index, body=query, scroll='1m', size=5000)
-    all_urls = [hit['_source']['url'] for hit in response['hits']['hits']]
+    all_ids = [hit['_id'] for hit in response['hits']['hits']]
     while len(response['hits']['hits']):
         response = es.scroll(scroll_id=response['_scroll_id'], scroll='1m')
-        all_urls += [hit['_source']['url'] for hit in response['hits']['hits']]
-    logging.info('Retrieved %d urls from Elasticsearch index: %s', len(all_urls), index)
-    return set(all_urls)
+        all_ids += [hit['_id'] for hit in response['hits']['hits']]
+    logging.info('Retrieved %d ids from Elasticsearch index: %s', len(all_ids), index)
+    return set(all_ids)
+
+# Function to deduplicate the batch
+def deduplicate_batch(docs_batch):
+    seen_hashes = set()
+    deduplicated_docs = []
+    for doc in docs_batch:
+        url = doc['url'].rstrip('/')
+        url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()
+        if url_hash not in seen_hashes:
+            seen_hashes.add(url_hash)
+            deduplicated_docs.append(doc)
+    return deduplicated_docs
 
 # Function to extract all features from a URL
-async def extract_features(url_dicts, session, api_key_manager):
-    semaphore = asyncio.Semaphore(20)
-    content_extractor = Content(session)
-    dom_extractor = DOM(session, api_key_manager)
+async def extract_single_url(doc, processed_ids, semaphore, session, api_key_manager):
+    async with semaphore:
+        url = doc['url'].rstrip('/')
+        type = doc['type']
 
-    async def extract_single_url(url_dict):
-        async with semaphore:
-            url = url_dict['url'].rstrip('/')
-            type = url_dict['type']
+        url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()
 
-            # Asynchronous extractors
-            content_task = content_extractor.extract(url)
-            dom_task = dom_extractor.extract(url)
+        if url_hash in processed_ids:
+            return None  # Skip processing this URL
 
-            # Synchronous extractors
-            domain_task = asyncio.to_thread(domain_extractor.extract, url)
-            lexical_task = asyncio.to_thread(lexical_extractor.extract, url)
+        domain_extractor = Domain()
+        lexical_extractor = Lexical()
+        content_extractor = Content(session)
+        dom_extractor = DOM(session, api_key_manager)
 
-            content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
-                content_task,
-                dom_task,
-                domain_task,
-                lexical_task
-            )
-            return {'url': url, 'type': type, **content_features, **domain_features, **lexical_features, **dom_features}
+        # Asynchronous extractors
+        content_task = content_extractor.extract(url)
+        dom_task = dom_extractor.extract(url)
 
-    tasks = [extract_single_url(url_dict) for url_dict in url_dicts]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    valid_results = [result for result in results if not isinstance(result, Exception)]
+        # Synchronous extractors
+        domain_task = asyncio.to_thread(domain_extractor.extract, url)
+        lexical_task = asyncio.to_thread(lexical_extractor.extract, url)
+
+        content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
+            content_task,
+            dom_task,
+            domain_task,
+            lexical_task
+        )
+
+        feature_dicts = {
+            'Content': content_features,
+            'DOM': dom_features,
+            'Domain': domain_features,
+            'Lexical': lexical_features
+        }
+
+        for extractor_name, features in feature_dicts.items():
+            if check_failure(features):
+                failures[extractor_name] += 1
+            else:
+                successes[extractor_name] += 1
+
+        return {
+            '_id': url_hash,
+            '_source': {
+                'url': url,
+                'type': type,
+                **content_features,
+                **domain_features,
+                **lexical_features,
+                **dom_features
+            }
+        }
+
+# Function to extract features from a batch of URLs
+async def extract_features(docs_batch, processed_ids, session, api_key_manager):
+    semaphore = asyncio.Semaphore(60)
+
+    tasks = [
+        extract_single_url(doc, processed_ids, semaphore, session, api_key_manager)
+        for doc in docs_batch
+    ]
+    results = await asyncio.gather(*tasks)
+    valid_results = [result for result in results if result is not None]
     return valid_results
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
-async def process_and_upload_batch(url_dicts_batch, es_client, index, batch_number, session, api_key_manager):
-    logging.info('Extracting features for batch number: %d', batch_number)
-    data = await extract_features(url_dicts_batch, session, api_key_manager)
+async def process_and_upload_batch(docs_batch, es_client, index, batch_number, session, api_key_manager, processed_ids):
+    logging.info(f'\nExtracting features for batch number: {batch_number}\n')
+    docs_batch = deduplicate_batch(docs_batch)
+
+    data = await extract_features(docs_batch, processed_ids, session, api_key_manager)
+    data = [doc for doc in data if doc is not None]
+    if not data:
+        logging.info(f"\nNo new documents to index for batch {batch_number}.\n")
+        return
+
     actions = [
         {
             '_index': index,
-            '_source': doc
+            '_id': doc['_id'],
+            '_source': doc['_source']
         }
         for doc in data
     ]
     
     loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, bulk, es_client, actions)
+        logging.info(f'\nProcessed batch number {batch_number} and uploaded into {index} index\n')
+    except BulkIndexError as e:
+        logging.error(f"Bulk indexing failed for batch {batch_number}")
+        for error in e.errors:
+            logging.error(f"Failed to index document: {error}")
+
     await loop.run_in_executor(None, bulk, es_client, actions)
-    logging.info(f'Processed batch number {batch_number} and uploaded into {index} index')
+    logging.info(f'\nProcessed batch number {batch_number} and uploaded into {index} index\n')
+
+    # Update processed_ids with the IDs just processed
+    processed_ids.update([doc['_id'] for doc in data])
+
+    # Log batch summary
+    batch_summary = f"Total summary after Batch {batch_number}:\n"
+    for extractor in feature_extractors:
+        batch_summary += f"{extractor} - Total Successes: {successes[extractor]}, Total Failures: {failures[extractor]}\n"
+    logging.info(batch_summary)
 
 async def main():
     es_client = initialize_es_client()
@@ -124,34 +204,35 @@ async def main():
 
     raw_data = get_es_index(es_client, SOURCE_INDEX)
 
-    # Get the unique urls from the SOURCE_INDEX
-    unique_urls_source = {doc['_source']['url'] for doc in raw_data}
-    logging.info(f'Number of unique URLs in the source index: {len(unique_urls_source)}')
+    # Extract url and type from raw_data
+    source_docs = [
+        {'url': doc['_source']['url'], 'type': doc['_source']['type']}
+        for doc in raw_data
+    ]
+    logging.info(f'Number of documents in the source index: {len(source_docs)}')
 
-    # Get all urls from the DESTINATION_INDEX
-    processed_urls = get_all_urls(es_client, DESTINATION_INDEX)
-    logging.info(f'Number of processed URLs in the destination index: {len(processed_urls)}')
-
-    # Get the urls that have not yet been processed along with their type
-    unprocessed_url_and_type = {doc['_source']['url']: doc['_source']['type'] 
-        for doc in raw_data if doc['_source']['url'] not in processed_urls}
-    logging.info(f'Number of unprocessed URLs: {len(unprocessed_url_and_type)}')
+    # Get all ids from the destination index
+    processed_ids = get_all_ids(es_client, DESTINATION_INDEX)
+    logging.info(f'Number of processed IDs in the destination index: {len(processed_ids)}')
 
     batch_size = 100
-    unprocessed_url_and_type_list = [{'url': url, 'type': type} for url, type in unprocessed_url_and_type.items()]
-
     API_KEYS_URLSCAN = os.getenv('URLSCAN_API_KEY').split(',')
     api_key_manager = ApiKeyManager(API_KEYS_URLSCAN)
 
     async with aiohttp.ClientSession() as session:
         # Process the unprocessed URLs in batches
-        for i in range(0, len(unprocessed_url_and_type_list), batch_size):
-            batch = unprocessed_url_and_type_list[i:i+batch_size]
+        for i in range(0, len(source_docs), batch_size):
+            batch = source_docs[i:i+batch_size]
             batch_index = i // batch_size + 1
             try:
-                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager)
+                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager, processed_ids)
             except Exception as e:
                 logging.error(f"Error processing batch {batch_index}: {e}", exc_info=True)
+        
+        final_summary = "Final Summary:\n"
+        for extractor in feature_extractors:
+            final_summary += f"{extractor} - Total Successes: {successes[extractor]}, Total Failures: {failures[extractor]}\n"
+        logging.info(final_summary)
 
 if __name__ == "__main__":
     asyncio.run(main())
