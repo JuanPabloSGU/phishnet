@@ -248,7 +248,7 @@ class Content:
                 return self.feat_dict
             self.feat_dict['content_redirects'] = response_data['redirects']
         except Exception:
-            print(f'Content.py: Error making request: {e}')
+            print(f'Content.py: Error making request')
             return self.feat_dict
 
         try:

@@ -23,7 +23,7 @@ failures = {extractor: 0 for extractor in feature_extractors}
 
 def check_failure(feature_dict):
     return any(
-        value == -1 for key, value in feature_dict.items() 
+        value == -1 or value == "-1" for key, value in feature_dict.items()
     )
 
 # Function to initialize Elasticsearch client
@@ -150,8 +150,8 @@ async def extract_features(docs_batch, processed_ids, session, api_key_manager):
         extract_single_url(doc, processed_ids, semaphore, session, api_key_manager)
         for doc in docs_batch
     ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    valid_results = [result for result in results if result and not isinstance(result, Exception)]
+    results = await asyncio.gather(*tasks)
+    valid_results = [result for result in results if result is not None]
     return valid_results
 
 # Function to process a batch of URLs and upload the extracted features to Elasticsearch
