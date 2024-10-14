@@ -12,7 +12,7 @@ from artint.src.features.Content import Content
 from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from artint.src.features.DOM import DOM
-from artint.src.features.ApiKeyManager import ApiKeyManager, AllApiKeysRateLimited
+from artint.src.features.ApiKeyManager import ApiKeyManager
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk, BulkIndexError
@@ -106,29 +106,25 @@ async def extract_single_url(doc, processed_ids, semaphore, session, api_key_man
         domain_task = asyncio.to_thread(domain_extractor.extract, url)
         lexical_task = asyncio.to_thread(lexical_extractor.extract, url)
 
-        try: 
-            content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
-                content_task,
-                dom_task,
-                domain_task,
-                lexical_task
-            )
+        content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
+            content_task,
+            dom_task,
+            domain_task,
+            lexical_task
+        )
 
-            feature_dicts = {
-                'Content': content_features,
-                'DOM': dom_features,
-                'Domain': domain_features,
-                'Lexical': lexical_features
-            }
+        feature_dicts = {
+            'Content': content_features,
+            'DOM': dom_features,
+            'Domain': domain_features,
+            'Lexical': lexical_features
+        }
 
-            for extractor_name, features in feature_dicts.items():
-                if check_failure(features):
-                    failures[extractor_name] += 1
-                else:
-                    successes[extractor_name] += 1
-
-        except AllApiKeysRateLimited:
-            raise
+        for extractor_name, features in feature_dicts.items():
+            if check_failure(features):
+                failures[extractor_name] += 1
+            else:
+                successes[extractor_name] += 1
 
         return {
             '_id': url_hash,
@@ -229,9 +225,6 @@ async def main():
             batch_index = i // batch_size + 1
             try:
                 await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager, processed_ids)
-            except AllApiKeysRateLimited:
-                logging.error("STOPPING EXECUTION - ALL API KEYS RATE LIMITED")
-                break
             except Exception as e:
                 logging.error(f"Error processing batch {batch_index}: {e}", exc_info=True)
         
