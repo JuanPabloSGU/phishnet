@@ -22,9 +22,10 @@ successes = {extractor: 0 for extractor in feature_extractors}
 failures = {extractor: 0 for extractor in feature_extractors}
 
 def check_failure(feature_dict):
-    return any(
-        value == -1 or value == "-1" for key, value in feature_dict.items()
-    )
+    total_features = len(feature_dict)
+    failed_features = sum(1 for value in feature_dict.values() if value == -1 or value == "-1")
+    
+    return failed_features >= total_features / 2
 
 # Function to initialize Elasticsearch client
 def initialize_es_client():
