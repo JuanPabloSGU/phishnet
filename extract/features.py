@@ -141,7 +141,7 @@ async def extract_single_url(doc, processed_ids, semaphore, session, api_key_man
 
 # Function to extract features from a batch of URLs
 async def extract_features(docs_batch, processed_ids, session, api_key_manager):
-    semaphore = asyncio.Semaphore(60)
+    semaphore = asyncio.Semaphore(180)
 
     tasks = [
         extract_single_url(doc, processed_ids, semaphore, session, api_key_manager)
@@ -180,9 +180,6 @@ async def process_and_upload_batch(docs_batch, es_client, index, batch_number, s
         for error in e.errors:
             logging.error(f"Failed to index document: {error}")
 
-    await loop.run_in_executor(None, bulk, es_client, actions)
-    logging.info(f'\nProcessed batch number {batch_number} and uploaded into {index} index\n')
-
     # Update processed_ids with the IDs just processed
     processed_ids.update([doc['_id'] for doc in data])
 
@@ -215,7 +212,7 @@ async def main():
     processed_ids = get_all_ids(es_client, DESTINATION_INDEX)
     logging.info(f'Number of processed IDs in the destination index: {len(processed_ids)}')
 
-    batch_size = 100
+    batch_size = 300
     API_KEYS_URLSCAN = os.getenv('URLSCAN_API_KEY').split(',')
     api_key_manager = ApiKeyManager(API_KEYS_URLSCAN)
 

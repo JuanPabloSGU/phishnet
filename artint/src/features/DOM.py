@@ -44,7 +44,7 @@ class DOM:
         ]
         for feature in feature_names:
             # Initialize 'dom_screenshot_url' as an empty string, others as -1
-            self.feat_dict[feature] = -1 if feature != 'dom_screenshot_url' else ''
+            self.feat_dict[feature] = -1 if feature != 'dom_screenshot_url' else '-1'
 
     async def submit_url(self, url: str):
         while True:
@@ -258,8 +258,8 @@ class DOM:
             return self.feat_dict
 
         logging.info(f"DOM.py: Submitted URL: {url}, UUID: {uuid}")
-        # Waiting 5 seconds before checking the result
-        await asyncio.sleep(5)
+        # Waiting 10 seconds before checking the result
+        await asyncio.sleep(10)
 
         result = await self.get_result(uuid, retries=5)
         if result is None:
