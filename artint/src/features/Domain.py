@@ -93,35 +93,50 @@ class Domain:
     @staticmethod
     def get_a_record(domain: str) -> str:
         try:
-            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'A')])
+            if dns.resolver.resolve(domain, 'A') == None:
+                return "-1"
+            else:
+                return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'A')])
         except:
             return "-1"
 
     @staticmethod
     def get_aaaa_record(domain: str) -> str:
         try:
-            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'AAAA')])
+            if dns.resolver.resolve(domain, 'AAAA') == None:
+                return "-1"
+            else:
+                return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'AAAA')])
         except:
             return "-1"
 
     @staticmethod
     def get_mx_record(domain: str) -> str:
         try:
-            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'MX')])
+            if dns.resolver.resolve(domain, 'MX') == None:
+                return "-1"
+            else:
+                return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'MX')])
         except:
             return "-1"
 
     @staticmethod
     def get_cname_record(domain: str) -> str:
         try:
-            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'CNAME')])
+            if dns.resolver.resolve(domain, 'CNAME') == None:
+                return "-1"
+            else:
+                return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'CNAME')])
         except:
             return "-1"
 
     @staticmethod
     def get_ns_record(domain: str) -> str:
         try:
-            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'NS')])
+            if dns.resolver.resolve(domain, 'NS') == None:
+                return "-1"
+            else:
+                return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'NS')])
         except:
             return "-1"
 
