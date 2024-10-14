@@ -1,6 +1,8 @@
 import whois
 import tldextract
 import logging
+import dns.resolver
+from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,24 +21,15 @@ class Domain:
             'domain_creation_date': "-1",
             'domain_expiration_date': "-1",
             'domain_updated_date': "-1",
-            'domain_dnssec': "-1"
+            'domain_dnssec': "-1",
+            'domain_a_record': "-1",
+            'domain_aaaa_record': "-1",
+            'domain_mx_record': "-1",
+            'domain_cname_record': "-1",
+            'domain_ns_record': "-1"
         }
         self.feat_dict = {**default_values, 'url': url}
 
-    @staticmethod
-    def get_domain(w: whois.WhoisEntry) -> str:
-        try:
-            return w.domain_name
-        except:
-            return "-1"
-
-    @staticmethod
-    def get_domain_length(w: whois.WhoisEntry) -> int:
-        try:
-            return len(w.domain_name)
-        except:
-            return -1
-    
     @staticmethod
     def get_name_servers(w: whois.WhoisEntry) -> str:
         try:
@@ -96,14 +89,53 @@ class Domain:
             return w.dnssec
         except:
             return "-1"
-    
+
+    @staticmethod
+    def get_a_record(domain: str) -> str:
+        try:
+            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'A')])
+        except:
+            return "-1"
+
+    @staticmethod
+    def get_aaaa_record(domain: str) -> str:
+        try:
+            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'AAAA')])
+        except:
+            return "-1"
+
+    @staticmethod
+    def get_mx_record(domain: str) -> str:
+        try:
+            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'MX')])
+        except:
+            return "-1"
+
+    @staticmethod
+    def get_cname_record(domain: str) -> str:
+        try:
+            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'CNAME')])
+        except:
+            return "-1"
+
+    @staticmethod
+    def get_ns_record(domain: str) -> str:
+        try:
+            return ', '.join([str(item) for item in dns.resolver.resolve(domain, 'NS')])
+        except:
+            return "-1"
+
     def extract(self, url):
         self.initialize_feat_dict(url)
 
+        parsed_url = urlparse(url)
+        domain_name = f"{parsed_url.hostname}" if parsed_url.hostname else url
+
+        self.feat_dict['domain'] = domain_name
+        self.feat_dict['domain_length'] = len(domain_name)
+
         try:
-            w = whois.whois(url)
-            self.feat_dict['domain'] = Domain.get_domain(w)
-            self.feat_dict['domain_length'] = Domain.get_domain_length(w)
+            w = whois.whois(domain_name)
             self.feat_dict['domain_name_servers'] = Domain.get_name_servers(w)
             self.feat_dict['domain_TLD'] = Domain.get_TLD(w)
             self.feat_dict['domain_registrar'] = Domain.get_registrar(w)
@@ -114,15 +146,23 @@ class Domain:
             self.feat_dict['domain_dnssec'] = Domain.get_dnssec(w)
 
         except Exception:
-            logging.error(f'Domain.py: Error making request on url: {url}')
-            return self.feat_dict
+            logging.error(f'Domain.py: WHOIS lookup failed for url: {domain_name}')
+
+        try:
+            self.feat_dict['domain_a_record'] = Domain.get_a_record(domain_name)
+            self.feat_dict['domain_aaaa_record'] = Domain.get_aaaa_record(domain_name)
+            self.feat_dict['domain_mx_record'] = Domain.get_mx_record(domain_name)
+            self.feat_dict['domain_cname_record'] = Domain.get_cname_record(domain_name)
+            self.feat_dict['domain_ns_record'] = Domain.get_ns_record(domain_name)
+        except Exception:
+            logging.error(f'Domain.py: DNS lookup failed for url: {domain_name}')
         
-        logging.info(f'Domain.py: Successfully returned domain features for url: {url}')
+        logging.info(f'Domain.py: Successfully returned domain features for url: {domain_name}')
         return self.feat_dict
 
 # example = Domain()
-# print(example.extract('https://www.southbankmosaics.com/'))
-
+# example.extract('https://reviewe-014035.firebaseapp.com/')
+#
 # for keys in example.feat_dict:
 #     print(keys + " " + str(type(example.feat_dict[keys])))
 #     print(example.feat_dict[keys])
