@@ -131,7 +131,7 @@ class Lexical:
             total_chars = len(alphabet)
             return -sum((count / total_chars) * log2(count / total_chars) for count in alphabet_freq.values() if count > 0)
         except:
-            return None
+            return -1
 
     @staticmethod
     def count_sub(_str: str, _sub: str):

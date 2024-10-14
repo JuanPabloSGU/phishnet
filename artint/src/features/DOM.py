@@ -12,7 +12,7 @@ phishnet_dir = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
 if phishnet_dir not in sys.path:
     sys.path.append(phishnet_dir)
 
-from artint.src.features.ApiKeyManager import ApiKeyManager
+from artint.src.features.ApiKeyManager import ApiKeyManager, AllApiKeysRateLimited
 from gathering.utils import generate_user_agent
 
 logging.basicConfig(level=logging.INFO)
@@ -48,10 +48,11 @@ class DOM:
 
     async def submit_url(self, url: str):
         while True:
-            api_key = await self.api_key_manager.get_api_key()
-            if api_key is None:
-                logging.error("DOM.py: No available API keys to submit URL: %s", url)
-                return None
+            try:
+                api_key = await self.api_key_manager.get_api_key()
+            except AllApiKeysRateLimited:
+                logging.error("STOPPING EXECUTION - ALL API KEYS RATE LIMITED")
+                raise
 
             headers = {
                 'User-Agent': self.user_agent,
@@ -98,10 +99,11 @@ class DOM:
     async def get_result(self, uuid: str, retries: int):
         url = f"https://urlscan.io/api/v1/result/{uuid}/"
         for idx in range(retries):
-            api_key = await self.api_key_manager.get_api_key()
-            if api_key is None:
-                logging.error("DOM.py: No available API keys to fetch result for UUID: %s", uuid)
-                return None
+            try:
+                api_key = await self.api_key_manager.get_api_key()
+            except AllApiKeysRateLimited:
+                logging.error("STOPPING EXECUTION - ALL API KEYS RATE LIMITED")
+                raise
 
             headers = {
                 'User-Agent': self.user_agent,
@@ -139,10 +141,11 @@ class DOM:
     async def get_dom_snapshot(self, uuid: str, retries: int):
         url = f"https://urlscan.io/dom/{uuid}/"
         for idx in range(retries):
-            api_key = await self.api_key_manager.get_api_key()
-            if api_key is None:
-                logging.error("DOM.py: No available API keys to fetch DOM snapshot for UUID: %s", uuid)
-                return None
+            try:
+                api_key = await self.api_key_manager.get_api_key()
+            except AllApiKeysRateLimited:
+                logging.error("STOPPING EXECUTION - ALL API KEYS RATE LIMITED")
+                raise
 
             headers = {
                 'User-Agent': self.user_agent,
@@ -275,6 +278,10 @@ class DOM:
 
             logging.info(f'DOM.py: Successfully returned DOM features for url: {url}')
             return self.feat_dict
+        
+        except AllApiKeysRateLimited:
+            logging.error(f"DOM.py: All API keys are rate-limited for URL {url}")
+            raise
 
         except Exception:
             logging.error(f"DOM.py: Error processing URL {url}", exc_info=True)

@@ -4,7 +4,12 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+class AllApiKeysRateLimited(Exception):
+    pass
+
 class ApiKeyManager:
+    DAILY_LIMIT_PER_KEY = 5000  # URLScan daily limit per API key
+
     def __init__(self, api_keys, rate_limit_reset_time=60):
         self.api_keys = api_keys
         self.current_index = 0
@@ -12,6 +17,8 @@ class ApiKeyManager:
         # Dictionary with key (API key) and value (timestamp when it was rate-limited)
         self.rate_limited_keys = {}
         self.rate_limit_reset_time = rate_limit_reset_time
+        self.total_possible_requests_today = len(api_keys) * self.DAILY_LIMIT_PER_KEY
+        logging.info(f"ApiKeyManager.py: Maximum total requests per day: {self.total_possible_requests_today}")
 
     async def get_api_key(self):
         async with self.lock:
@@ -34,8 +41,7 @@ class ApiKeyManager:
 
             # All API keys are rate-limited
             logging.error("ApiKeyManager.py: All API keys are rate-limited. Waiting for reset.")
-            await asyncio.sleep(self.rate_limit_reset_time)
-            return None
+            raise AllApiKeysRateLimited("All API keys are rate-limited or have exhausted their daily limits.")
 
     async def mark_rate_limited(self, api_key):
         async with self.lock:

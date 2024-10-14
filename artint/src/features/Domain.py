@@ -1,7 +1,6 @@
 import whois
 import tldextract
 import logging
-from typing import Union
 
 logging.basicConfig(level=logging.INFO)
 
@@ -9,43 +8,41 @@ class Domain:
     def __init__(self) -> None:
         self.feat_dict = {}
 
-    def initialize_feat_dict(self, url):
-        self.feat_dict = {'url': url}
-        feature_names = [
-            'domain',
-            'domain_length',
-            'domain_name_servers',
-            'domain_TLD',
-            'domain_registrar',
-            'domain_whois_server',
-            'domain_creation_date',
-            'domain_expiration_date',
-            'domain_updated_date',
-            'domain_dnssec'
-        ]
-        for feature in feature_names:
-            self.feat_dict[feature] = -1
+    def initialize_feat_dict(self, url: str) -> None:
+        default_values = {
+            'domain': "-1",
+            'domain_length': -1,
+            'domain_name_servers': "-1",
+            'domain_TLD': "-1",
+            'domain_registrar': "-1",
+            'domain_whois_server': "-1",
+            'domain_creation_date': "-1",
+            'domain_expiration_date': "-1",
+            'domain_updated_date': "-1",
+            'domain_dnssec': "-1"
+        }
+        self.feat_dict = {**default_values, 'url': url}
 
     @staticmethod
-    def get_domain(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_domain(w: whois.WhoisEntry) -> str:
         try:
             return w.domain_name
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_domain_length(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_domain_length(w: whois.WhoisEntry) -> int:
         try:
             return len(w.domain_name)
         except:
             return -1
     
     @staticmethod
-    def get_name_servers(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_name_servers(w: whois.WhoisEntry) -> str:
         try:
             return ', '.join([str(item) for item in w.name_servers])
         except:
-            return -1
+            return "-1"
 
     @staticmethod
     def get_TLD(w) -> str:
@@ -56,49 +53,49 @@ class Domain:
             extracted = tldextract.extract(domain)
             return extracted.suffix
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_registrar(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_registrar(w: whois.WhoisEntry) -> str:
         try:
             return w.registrar
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_whois_server(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_whois_server(w: whois.WhoisEntry) -> str:
         try:
             return w.whois_server
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_creation_date(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_creation_date(w: whois.WhoisEntry) -> str:
         try:
             return w.creation_date.strftime("%m/%d/%Y, %H:%M:%S")
         except:
-            return -1
+            return "-1"
     
     @staticmethod
-    def get_expiration_date(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_expiration_date(w: whois.WhoisEntry) -> str:
         try:
             return w.expiration_date.strftime("%m/%d/%Y, %H:%M:%S")
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_updated_date(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_updated_date(w: whois.WhoisEntry) -> str:
         try:
             return '| '.join([item.strftime("%m/%d/%Y, %H:%M:%S") for item in w.updated_date])
         except:
-            return -1
+            return "-1"
 
     @staticmethod
-    def get_dnssec(w: whois.WhoisEntry) -> Union[int, str]:
+    def get_dnssec(w: whois.WhoisEntry) -> str:
         try:
             return w.dnssec
         except:
-            return -1
+            return "-1"
     
     def extract(self, url):
         self.initialize_feat_dict(url)

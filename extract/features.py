@@ -12,10 +12,19 @@ from artint.src.features.Content import Content
 from artint.src.features.Domain import Domain
 from artint.src.features.Lexical import Lexical
 from artint.src.features.DOM import DOM
-from artint.src.features.ApiKeyManager import ApiKeyManager
+from artint.src.features.ApiKeyManager import ApiKeyManager, AllApiKeysRateLimited
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk
+from elasticsearch.helpers import bulk, BulkIndexError
+
+feature_extractors = ['Content', 'Domain', 'Lexical', 'DOM']
+successes = {extractor: 0 for extractor in feature_extractors}
+failures = {extractor: 0 for extractor in feature_extractors}
+
+def check_failure(feature_dict):
+    return any(
+        value == -1 for key, value in feature_dict.items() 
+    )
 
 # Function to initialize Elasticsearch client
 def initialize_es_client():
@@ -84,7 +93,6 @@ async def extract_single_url(doc, processed_ids, semaphore, session, api_key_man
         if url_hash in processed_ids:
             return None  # Skip processing this URL
 
-        # Initialize extractors per URL
         domain_extractor = Domain()
         lexical_extractor = Lexical()
         content_extractor = Content(session)
@@ -98,12 +106,30 @@ async def extract_single_url(doc, processed_ids, semaphore, session, api_key_man
         domain_task = asyncio.to_thread(domain_extractor.extract, url)
         lexical_task = asyncio.to_thread(lexical_extractor.extract, url)
 
-        content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
-            content_task,
-            dom_task,
-            domain_task,
-            lexical_task
-        )
+        try: 
+            content_features, dom_features, domain_features, lexical_features = await asyncio.gather(
+                content_task,
+                dom_task,
+                domain_task,
+                lexical_task
+            )
+
+            feature_dicts = {
+                'Content': content_features,
+                'DOM': dom_features,
+                'Domain': domain_features,
+                'Lexical': lexical_features
+            }
+
+            for extractor_name, features in feature_dicts.items():
+                if check_failure(features):
+                    failures[extractor_name] += 1
+                else:
+                    successes[extractor_name] += 1
+
+        except AllApiKeysRateLimited:
+            raise
+
         return {
             '_id': url_hash,
             '_source': {
@@ -149,11 +175,25 @@ async def process_and_upload_batch(docs_batch, es_client, index, batch_number, s
     ]
     
     loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, bulk, es_client, actions)
+        logging.info(f'\nProcessed batch number {batch_number} and uploaded into {index} index\n')
+    except BulkIndexError as e:
+        logging.error(f"Bulk indexing failed for batch {batch_number}")
+        for error in e.errors:
+            logging.error(f"Failed to index document: {error}")
+
     await loop.run_in_executor(None, bulk, es_client, actions)
     logging.info(f'\nProcessed batch number {batch_number} and uploaded into {index} index\n')
 
     # Update processed_ids with the IDs just processed
     processed_ids.update([doc['_id'] for doc in data])
+
+    # Log batch summary
+    batch_summary = f"Total summary after Batch {batch_number}:\n"
+    for extractor in feature_extractors:
+        batch_summary += f"{extractor} - Total Successes: {successes[extractor]}, Total Failures: {failures[extractor]}\n"
+    logging.info(batch_summary)
 
 async def main():
     es_client = initialize_es_client()
@@ -188,11 +228,17 @@ async def main():
             batch = source_docs[i:i+batch_size]
             batch_index = i // batch_size + 1
             try:
-                await process_and_upload_batch(
-                    batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager, processed_ids
-                )
+                await process_and_upload_batch(batch, es_client, DESTINATION_INDEX, batch_index, session, api_key_manager, processed_ids)
+            except AllApiKeysRateLimited:
+                logging.error("STOPPING EXECUTION - ALL API KEYS RATE LIMITED")
+                break
             except Exception as e:
                 logging.error(f"Error processing batch {batch_index}: {e}", exc_info=True)
+        
+        final_summary = "Final Summary:\n"
+        for extractor in feature_extractors:
+            final_summary += f"{extractor} - Total Successes: {successes[extractor]}, Total Failures: {failures[extractor]}\n"
+        logging.info(final_summary)
 
 if __name__ == "__main__":
     asyncio.run(main())
