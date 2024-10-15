@@ -6,7 +6,7 @@ import logging
 from bs4 import BeautifulSoup
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-from gathering.utils import generate_user_agent
+from utilities.ServiceUtils import generate_user_agent
 
 logging.basicConfig(level=logging.INFO)
 

@@ -4,9 +4,11 @@ import hashlib
 import logging
 import os
 import sys
-import utils
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import utilities.ServiceUtils as ServiceUtils
 from dotenv import load_dotenv
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import helpers
 from asyncio import Semaphore, Lock
 
 # Function to fetch and index urls
@@ -19,7 +21,7 @@ async def fetch_and_index_urls(es_client, session, source, index, stream, type, 
 
     if is_url: # If the source is a URL
         logging.info(f'Downloading data from {source}')
-        data = utils.download_from_url(source, stream)
+        data = ServiceUtils.download_from_url(source, stream)
         if data is None:
             return
         urls = data.iter_lines()
@@ -42,7 +44,7 @@ async def fetch_and_index_urls(es_client, session, source, index, stream, type, 
     async def process_url(row):
         async with semaphore:
             url = row.decode() if is_url else row.strip()
-            url = await utils.preprocess_url(session, url)
+            url = await ServiceUtils.preprocess_url(session, url)
             if url is None:
                 return
 
@@ -84,15 +86,7 @@ async def main():
 
     TARGET_INDEX = 'raw2'
 
-    # Connect to Elasticsearch
-    logging.info('Connecting to Elasticsearch')
-    es_client = Elasticsearch(
-        ELASTICSEARCH_HOST,
-        basic_auth=(ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD),
-        request_timeout=60
-    )
-
-    # Test the Elasticsearch connection
+    es_client = ServiceUtils.initialize_es_client(ELASTICSEARCH_HOST, ELASTICSEARCH_USER, ELASTICSEARCH_PASSWORD)
     logging.info('Testing Elasticsearch connection')
     try:
         info = es_client.info()

@@ -13,7 +13,7 @@ if phishnet_dir not in sys.path:
     sys.path.append(phishnet_dir)
 
 from artint.src.features.ApiKeyManager import ApiKeyManager
-from gathering.utils import generate_user_agent
+from utilities.ServiceUtils import generate_user_agent
 
 logging.basicConfig(level=logging.INFO)
 

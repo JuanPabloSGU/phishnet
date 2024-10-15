@@ -1,9 +1,11 @@
 import asyncio
 import aiohttp
+import hashlib
 import logging
 import random
 import re
 import requests
+from elasticsearch import Elasticsearch
 
 # Helper function to download data from a URL
 def download_from_url(url, stream):
@@ -88,3 +90,60 @@ async def preprocess_url(session, url):
     except Exception as e:
         logging.error(f"URL skipped: {http_url} - Unexpected exception occurred: {e}")
         return None
+    
+# Function to initialize Elasticsearch client
+def initialize_es_client(host, user, password):
+    logging.info('Connecting to Elasticsearch')
+    es_client = Elasticsearch(
+        host,
+        basic_auth=(user, password),
+        request_timeout=60
+    )
+    return es_client
+
+# Function to get all data from an Elasticsearch index
+def get_es_index(es, index):
+    try:
+        logging.info('Getting all data from Elasticsearch index: %s', index)
+        query = {"query": {"match_all": {}}}
+        response = es.search(index=index, body=query, scroll='1m', size=5000)
+        all_data = response['hits']['hits']
+        while len(response['hits']['hits']):
+            response = es.scroll(scroll_id=response['_scroll_id'], scroll='1m')
+            all_data += response['hits']['hits']
+        logging.info('Retrieved %d documents from Elasticsearch index: %s', len(all_data), index)
+        return all_data
+    finally:
+        es.clear_scroll(scroll_id=response['_scroll_id'])
+
+# Function to get all URL IDs (hashes) from an Elasticsearch index
+def get_all_ids(es, index):
+    logging.info('Getting all ids from Elasticsearch index: %s', index)
+    query = {"stored_fields": [], "query": {"match_all": {}}}
+    response = es.search(index=index, body=query, scroll='1m', size=5000)
+    all_ids = [hit['_id'] for hit in response['hits']['hits']]
+    while len(response['hits']['hits']):
+        response = es.scroll(scroll_id=response['_scroll_id'], scroll='1m')
+        all_ids += [hit['_id'] for hit in response['hits']['hits']]
+    logging.info('Retrieved %d ids from Elasticsearch index: %s', len(all_ids), index)
+    return set(all_ids)
+
+# Function to deduplicate the batch
+def deduplicate_batch(docs_batch):
+    seen_hashes = set()
+    deduplicated_docs = []
+    for doc in docs_batch:
+        url = doc['url'].rstrip('/')
+        url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()
+        if url_hash not in seen_hashes:
+            seen_hashes.add(url_hash)
+            deduplicated_docs.append(doc)
+    return deduplicated_docs
+
+# Helper function that returns true if >= 50% of features in dictionary failed
+def check_failure(feature_dict):
+    total_features = len(feature_dict)
+    if (total_features == 0): return False
+    
+    failed_features = sum(1 for value in feature_dict.values() if value == -1 or value == "-1")
+    return failed_features >= total_features / 2
