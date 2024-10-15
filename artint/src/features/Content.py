@@ -41,7 +41,7 @@ class Content:
             'content_use_http_link'
         ]
         for feature in feature_names:
-            self.feat_dict[feature] = -1
+            self.feat_dict[feature] = -1 if feature != 'content_meta_script_link_percentage' else '-1'
 
     async def make_request(self, url: str, timeout: int, retries: int):
         for idx in range(retries):
