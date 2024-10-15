@@ -1,17 +1,43 @@
 import json
 import requests
 import numpy as np
-from flask import Blueprint
+from flask import Blueprint, request, current_app
 from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
-from flask_jwt_extended import verify_jwt_in_request, get_jwt
 from flask_cors import CORS
+from authlib.jose import jwt
+from jwcrypto import jwk
+
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
 CORS(blueprint)
+
+def get_public_key(n, e):
+    public_key = jwk.JWK(
+            kty='RSA',
+            n=n,
+            e=e,
+            alg='RS256'
+            )
+
+    return public_key.export_to_pem(private_key=False, password=False).decode('utf-8')
+
+def verify_jwt(token):
+    public_keys = current_app.config['JWT_PUBLIC_KEYS']
+
+    for key in public_keys:
+        public_key_pem = get_public_key(key['n'], key['e'])
+
+        try:
+            claims = jwt.decode(token, public_key_pem, claims_options={'iss': {'essential': True, 'value': 'https://zitadel.databending.ca'}})
+            return claims
+        except Exception as e:
+            continue
+
+    return None
 
 
 class HelloWorldResource(Resource):
@@ -62,9 +88,21 @@ class UserResource(Resource):
         }
     })
     def get(self):
-        verify_jwt_in_request(locations=['headers'])
-        current_user = get_jwt()
-        return {'msg': f'Hello, {current_user["name"]}!'}
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
+        return {'msg': f'Hello, {jwt["name"]}!'}
 
 
 api.add_resource(UserResource, '/user')
@@ -99,7 +137,20 @@ class ElasticsearchResource(Resource):
         }
     })
     def get(self):
-        verify_jwt_in_request(locations=['headers'])
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
         es = elastic.get_elastic().info(pretty=True)
         return {'message': 'Elasticsearch is running.', 'info': es.body}
 
@@ -236,7 +287,6 @@ class LogisticalRegression(Resource):
         },
     })
     def post(self):
-        verify_jwt_in_request(locations=['headers'])
         url = get_protocol(parse_URL())
 
         if url is None:
@@ -310,7 +360,6 @@ class RandomForest(Resource):
         }
     })
     def post(self):
-        verify_jwt_in_request(locations=['headers'])
         url = get_protocol(parse_URL())
 
         if url is None:
@@ -384,7 +433,6 @@ class MLPResource(Resource):
         }
     })
     def post(self):
-        verify_jwt_in_request(locations=['headers'])
         url = get_protocol(parse_URL())
 
         if url is None:
