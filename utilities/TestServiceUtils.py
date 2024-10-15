@@ -1,7 +1,8 @@
+import aiohttp
 import unittest
+
 from unittest.mock import AsyncMock
 from ServiceUtils import preprocess_url, deduplicate_batch, check_failure
-import aiohttp
 
 class TestUtils(unittest.IsolatedAsyncioTestCase):
     #region preprocess_url
