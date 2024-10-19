@@ -84,7 +84,7 @@ class Content:
         except:
             return -1
 
-    def meta_script_link_percentage(self, soup: BeautifulSoup) -> tuple[float, float, float]:
+    def meta_script_link_percentage(self, soup: BeautifulSoup) -> str:
         """
         Returns the percentage of meta, script, and link tags.
         """
@@ -122,25 +122,47 @@ class Content:
         except:
             return -1
 
-    def get_right_click_disabled(self, soup: BeautifulSoup) -> int:
+    def use_event_prevent_default(self, soup: BeautifulSoup, event_type: str) -> int:
         """
-        Returns if right click is disabled (1), otherwize 0.
+        Return if a specific event's default action is prevented (1), otherwise 0.
+        event_type: The JavaScript event to check for (e.g., 'keydown', 'copy', 'dragstart').
         """
         try:
             for tag in soup.find_all('script'):
-                if 'event.button==2' in tag.text:
+                script_text = tag.get_text().lower()
+                # Check for specific event listener that calls preventDefault
+                pattern = f"window.addeventlistener('{event_type}',"
+                if pattern in script_text and 'preventdefault()' in script_text:
+                    return 1
+                # Alternatively, check for direct assignment of event handler
+                pattern2 = f"document.{event_type} = function"
+                if pattern2 in script_text and 'preventdefault()' in script_text:
                     return 1
             return 0
-        except:
+        except Exception:
             return -1
-
+        
+    def get_right_click_disabled(self, soup: BeautifulSoup) -> int:
+        """
+        Return if right-click is disabled (1), otherwise 0.
+        """
+        try:
+            for tag in soup.find_all('script'):
+                script_text = tag.get_text().lower()
+                if 'event.button==2' in script_text or 'event.preventdefault()' in script_text:
+                    return 1
+            return 0
+        except Exception:
+            return -1
+    
     def get_keyboard_shortcuts_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if keyboard shortcuts are disabled (1), otherwise 0.
+        Checks for 'keydown', 'keypress', 'keyup' events.
         """
         try:
-            for tag in soup.find_all('script'):
-                if 'event.preventDefault()' in tag.text:
+            for event in ['keydown', 'keypress', 'keyup', 'onkeydown', 'onkeypress', 'onkeyup']:
+                if self.use_event_prevent_default(soup, event) == 1:
                     return 1
             return 0
         except:
@@ -149,10 +171,11 @@ class Content:
     def get_copy_paste_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if copy-paste is disabled (1), otherwise 0.
+        Checks for 'copy', 'cut', 'paste' events.
         """
         try:
-            for tag in soup.find_all('script'):
-                if 'event.clipboardData' in tag.text or 'event.preventDefault()' in tag.text:
+            for event in ['copy', 'cut', 'paste', 'oncopy', 'oncut', 'onpaste']:
+                if self.use_event_prevent_default(soup, event) == 1:
                     return 1
             return 0
         except:
@@ -161,10 +184,11 @@ class Content:
     def get_drag_drop_disabled(self, soup: BeautifulSoup) -> int:
         """
         Return if drag and drop is disabled (1), otherwise 0.
+        Checks for 'dragstart', 'dragover', 'drop' events.
         """
         try:
-            for tag in soup.find_all('script'):
-                if 'event.dataTransfer' in tag.text or 'event.preventDefault()' in tag.text:
+            for event in ['dragstart', 'dragover', 'drop', 'ondragstart', 'ondragover', 'ondrop']:
+                if self.use_event_prevent_default(soup, event) == 1:
                     return 1
             return 0
         except:
@@ -215,10 +239,8 @@ class Content:
             all_links = soup.find_all('a')
 
             for link in all_links:
-                href = link.get('href')
-                if href:
-                    if 'download' in href.lower():
-                        return 1
+                if link.has_attr('download'):
+                    return 1
             return 0
         except:
             return -1
