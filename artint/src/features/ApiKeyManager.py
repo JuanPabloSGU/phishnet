@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import aiohttp
 from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +36,7 @@ class ApiKeyManager:
 
     async def clean_rate_limited_keys(self):
         now = datetime.now(timezone.utc)
-        keys_to_remove = [api_key for api_key, reset_time in self.rate_limited_keys.items() if reset_time <= now]
+        keys_to_remove = [api_key for api_key, reset_time in self.rate_limited_keys.items() if now >= reset_time]
         for api_key in keys_to_remove:
             del self.rate_limited_keys[api_key]
             logging.info(f"ApiKeyManager.py: API key {api_key} is no longer rate-limited.")
@@ -63,32 +62,3 @@ class ApiKeyManager:
                 return datetime.now(timezone.utc)
             next_reset = min(self.rate_limited_keys.values())
             return next_reset
-
-    # Unused for now
-    async def get_remaining_requests(self):
-        remaining_requests = {}
-        async with aiohttp.ClientSession() as session:
-            tasks = [self.fetch_remaining_requests(session, api_key) for api_key in self.api_keys]
-            results = await asyncio.gather(*tasks)
-            for api_key, remaining in results:
-                remaining_requests[api_key] = remaining
-        return remaining_requests
-
-    async def fetch_remaining_requests(self, session, api_key):
-        url = "https://urlscan.io/user/quotas/"
-        headers = {
-            "Content-Type": "application/json",
-            "API-Key": api_key
-        }
-        try:
-            async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    logging.error(f"Failed to get quotas for API key {api_key}: HTTP {response.status}")
-                    return (api_key, None)
-                data = await response.json()
-                remaining = data.get('limits', {}).get('public', {}).get('day', {}).get('remaining', None)
-                logging.info(f"Remaining public requests for API key {api_key}: {remaining}")
-                return (api_key, remaining)
-        except Exception as e:
-            logging.error(f"Exception while fetching quotas for API key {api_key}: {e}")
-            return (api_key, None)
