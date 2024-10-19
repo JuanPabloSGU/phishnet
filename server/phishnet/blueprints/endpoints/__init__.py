@@ -1,4 +1,5 @@
 import json
+from random import uniform
 import requests
 import numpy as np
 from flask import Blueprint, request, current_app
@@ -61,6 +62,73 @@ class HelloWorldResource(Resource):
 
 
 api.add_resource(HelloWorldResource, '/hello_world')
+
+
+class LLMMockResource(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            },
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self): 
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
+        url = parse_URL()
+        
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        percentage = float("{:.2f}".format(uniform(0, 1)*100))
+
+        return {'message': f'{percentage}%'}
+
+
+api.add_resource(LLMMockResource, '/llm_mock')
+
 
 class UserResource(Resource):
     @ swag_from({
