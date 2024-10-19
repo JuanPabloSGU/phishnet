@@ -1,55 +1,44 @@
 import json
+from random import uniform
 import requests
 import numpy as np
-from flask import Blueprint
+from flask import Blueprint, request, current_app
 from flask_restful import Api, Resource, reqparse
 from flasgger import swag_from
 from phishnet import elastic
 from phishnet.blueprints.features.Lexical import Lexical
-from flask_jwt_extended import create_access_token, jwt_required
 from flask_cors import CORS
+from authlib.jose import jwt
+from jwcrypto import jwk
+
 
 blueprint = Blueprint('api', __name__, url_prefix='/api/v1')
 api = Api(blueprint)
 CORS(blueprint)
 
+def get_public_key(n, e):
+    public_key = jwk.JWK(
+            kty='RSA',
+            n=n,
+            e=e,
+            alg='RS256'
+            )
 
-class LoginResource(Resource):
-    @ swag_from({
-        'responses': {
-            200: {
-                'description': 'Hello, World!',
-                'schema': {
-                    'type': 'object',
-                    'properties': {
-                        'message': {
-                            'type': 'string'
-                        },
-                        'access_token': {
-                            'type': 'string'
-                        }
-                    }
-                }
-            }
-        }
-    })
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('username', type=str,
-                            required=True, help='Username is required')
-        parser.add_argument('password', type=str,
-                            required=True, help='Password is required')
+    return public_key.export_to_pem(private_key=False, password=False).decode('utf-8')
 
-        args = parser.parse_args()
-        username = args['username']
-        # password = args['password']
+def verify_jwt(token):
+    public_keys = current_app.config['JWT_PUBLIC_KEYS']
 
-        access_token = create_access_token(identity=username)
-        return {'message': 'Succesful login!',
-                'access_token': access_token}
+    for key in public_keys:
+        public_key_pem = get_public_key(key['n'], key['e'])
 
+        try:
+            claims = jwt.decode(token, public_key_pem, claims_options={'iss': {'essential': True, 'value': 'https://zitadel.databending.ca'}})
+            return claims
+        except Exception as e:
+            continue
 
-api.add_resource(LoginResource, '/login')
+    return None
 
 
 class HelloWorldResource(Resource):
@@ -75,8 +64,129 @@ class HelloWorldResource(Resource):
 api.add_resource(HelloWorldResource, '/hello_world')
 
 
+class LLMMockResource(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            },
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self): 
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
+        url = parse_URL()
+        
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        percentage = float("{:.2f}".format(uniform(0, 1)*100))
+
+        return {'message': f'{percentage}%'}
+
+
+api.add_resource(LLMMockResource, '/llm_mock')
+
+
+class UserResource(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Hello, User!',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def get(self):
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
+        return {'msg': f'Hello, {jwt["name"]}!'}
+
+
+api.add_resource(UserResource, '/user')
+
+
 class ElasticsearchResource(Resource):
     @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            }
+        ],
         'responses': {
             200: {
                 'description': 'Hello, ElasticSearch!',
@@ -94,8 +204,21 @@ class ElasticsearchResource(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def get(self):
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
         es = elastic.get_elastic().info(pretty=True)
         return {'message': 'Elasticsearch is running.', 'info': es.body}
 
@@ -202,6 +325,13 @@ class LogisticalRegression(Resource):
                 'in': 'formData',
                 'type': 'string',
                 'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
             }
         ],
         'responses': {
@@ -224,7 +354,6 @@ class LogisticalRegression(Resource):
             }
         },
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 
@@ -269,6 +398,13 @@ class RandomForest(Resource):
                 'in': 'formData',
                 'type': 'string',
                 'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
             }
         ],
         'responses': {
@@ -291,7 +427,6 @@ class RandomForest(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 
@@ -336,6 +471,13 @@ class MLPResource(Resource):
                 'in': 'formData',
                 'type': 'string',
                 'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
             }
         ],
         'responses': {
@@ -358,7 +500,6 @@ class MLPResource(Resource):
             }
         }
     })
-    @jwt_required(locations=["headers"])
     def post(self):
         url = get_protocol(parse_URL())
 

@@ -2,7 +2,6 @@ from flask import Flask
 from flask_restful import Api
 from flasgger import Swagger
 from .blueprints.endpoints import blueprint as endpoints
-from flask_jwt_extended import JWTManager
 
 
 def create_app():
@@ -12,7 +11,6 @@ def create_app():
 
     Api(app)
     Swagger(app)
-    JWTManager(app)
     return app
 
 
