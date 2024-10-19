@@ -5,22 +5,43 @@ import asyncio
 import logging
 from bs4 import BeautifulSoup
 
+# Add the root directory to the system path for importing helper functions from utilities
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from utilities.ServiceUtils import generate_user_agent
 
 logging.basicConfig(level=logging.INFO)
 
 class Content:
+    """
+    A class to extract various content-related features from a given URL's HTML content.
+    
+    This class handles making HTTP requests to fetch the HTML content of a URL,
+    parsing the HTML using BeautifulSoup, and extracting specific features related
+    to the content, such as the number of redirects, lengths of HTML and text,
+    presence of certain HTML elements, and usage of JavaScript events.
+    """
     def __init__(self, session: aiohttp.ClientSession) -> None:
+        """
+        Initializes the Content extractor with an aiohttp session.
+        
+        Parameters:
+        session (aiohttp.ClientSession): An aiohttp session used for making HTTP requests.
+        """
         self.session = session
         self.user_agent = generate_user_agent()
         self.headers = {
             'User-Agent': self.user_agent,
             'Connection': 'close'
         }
-        self.feat_dict = {}
+        self.feat_dict = {} # Dictionary to store extracted features
 
     def initialize_feat_dict(self, url):
+        """
+        Initializes the feature dictionary with default values for a given URL.
+        
+        Parameters:
+        url (str): The URL for which features are being extracted.
+        """
         self.feat_dict = {'url': url}
         feature_names = [
             'content_redirects',
@@ -40,10 +61,23 @@ class Content:
             'content_use_download',
             'content_use_http_link'
         ]
+        # Initialize all features to -1 or '-1' indicating default or unprocessed state
         for feature in feature_names:
             self.feat_dict[feature] = -1 if feature != 'content_meta_script_link_percentage' else '-1'
 
     async def make_request(self, url: str, timeout: int, retries: int):
+        """
+        Makes an HTTP GET request to the specified URL with retry logic.
+        
+        Parameters:
+        url (str): The URL to fetch content from.
+        timeout (int): The timeout for the HTTP request in seconds.
+        retries (int): The number of retry attempts in case of failure.
+        
+        Returns:
+        dict: A dictionary containing the 'content' (HTML bytes) and 'redirects' (int),
+              or None if the request fails after retries.
+        """
         for idx in range(retries):
             try:
                 async with self.session.get(url, timeout=timeout, allow_redirects=True) as response:
@@ -52,6 +86,7 @@ class Content:
                     redirects = len(response.history)
                     return {'content': content, 'redirects': redirects}
             except aiohttp.ClientError:
+                # Exponential backoff for retries
                 retry_delay = 2**idx
                 logging.error(f'Content.py: ClientError for {url}. Retrying in {retry_delay} seconds.')
                 await asyncio.sleep(retry_delay)
@@ -262,9 +297,24 @@ class Content:
 
 
     async def extract(self, url):
+        """
+        Extracts all defined content features from the specified URL.
+        
+        This method initializes the feature dictionary, makes an HTTP request to fetch
+        the HTML content, parses the HTML, and extracts various features related to
+        the content's structure and behavior.
+        
+        Parameters:
+        url (str): The URL from which to extract content features.
+        
+        Returns:
+        dict: A dictionary containing the extracted features for the URL.
+        """
+        # Initialize the feature dictionary with default values
         self.initialize_feat_dict(url)
 
         try:
+            # Make an HTTP request to fetch the content
             response_data = await self.make_request(url, timeout=15, retries=3)
             if response_data is None:
                 return self.feat_dict
@@ -274,8 +324,11 @@ class Content:
             return self.feat_dict
 
         try:
+            # Parse the HTML content using BeautifulSoup
             content = response_data['content']
             soup = BeautifulSoup(content, 'html.parser')
+
+            # Extract content features
             self.feat_dict['content_len_html'] = len(soup.prettify())
             self.feat_dict['content_len_text'] = len(soup.get_text())
             self.feat_dict['content_len_links'] = self.get_links(soup)
