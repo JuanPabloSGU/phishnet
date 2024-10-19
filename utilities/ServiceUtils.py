@@ -7,8 +7,17 @@ import re
 import requests
 from elasticsearch import Elasticsearch
 
-# Helper function to download data from a URL
 def download_from_url(url, stream):
+    """
+    Downloads data from the specified URL.
+
+    Parameters:
+    url (str): The URL to download data from.
+    stream (bool): If True, the response content will be streamed; otherwise, it will be downloaded immediately.
+
+    Returns:
+    Response object if the download is successful; otherwise, None.
+    """
     logging.info(f"Downloading data from {url}")
     response = requests.get(url, stream=stream)
     if response.status_code != 200:
@@ -18,7 +27,10 @@ def download_from_url(url, stream):
 
 def generate_user_agent() -> str:
     """
-    Generate a random user agent.
+    Generates a random user agent string from a predefined list.
+
+    Returns:
+    str: A randomly selected user agent string.
     """
     user_agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
@@ -46,8 +58,17 @@ def generate_user_agent() -> str:
 
     return random.choice(user_agents)
 
-# Helper function to add scheme to a URL for consistency
 async def preprocess_url(session, url):
+    """
+    Preprocesses a URL by ensuring it has a valid HTTP or HTTPS scheme and verifying its accessibility.
+
+    Parameters:
+    session (aiohttp.ClientSession): The aiohttp session used to make HTTP requests.
+    url (str): The URL to preprocess.
+
+    Returns:
+    str or None: The preprocessed and validated URL with scheme, or None if validation fails.
+    """
     headers = {
         'User-Agent': generate_user_agent()
     }
@@ -77,7 +98,7 @@ async def preprocess_url(session, url):
         else:
             logging.warning(f"URL skipped: {http_url} - Received status code: {response.status}")
             return None
-    # Skip the URL if an Exception or Error occurred
+    # Handle specific exceptions and skip the URL if they occur
     except asyncio.TimeoutError:
         logging.warning(f"URL skipped: {http_url} - Timeout occurred")
         return None
@@ -91,8 +112,18 @@ async def preprocess_url(session, url):
         logging.error(f"URL skipped: {http_url} - Unexpected exception occurred: {e}")
         return None
     
-# Function to initialize Elasticsearch client
 def initialize_es_client(host, user, password):
+    """
+    Initializes and returns an Elasticsearch client.
+
+    Parameters:
+    host (str): The Elasticsearch host URL.
+    user (str): The username for Elasticsearch authentication.
+    password (str): The password for Elasticsearch authentication.
+
+    Returns:
+    Elasticsearch: An instance of the Elasticsearch client.
+    """
     logging.info('Connecting to Elasticsearch')
     es_client = Elasticsearch(
         host,
@@ -101,8 +132,17 @@ def initialize_es_client(host, user, password):
     )
     return es_client
 
-# Function to get all data from an Elasticsearch index
 def get_es_index(es, index):
+    """
+    Retrieves all documents from the specified Elasticsearch index.
+
+    Parameters:
+    es (Elasticsearch): The Elasticsearch client instance.
+    index (str): The name of the Elasticsearch index to query.
+
+    Returns:
+    list: A list of all documents retrieved from the index.
+    """
     try:
         logging.info('Getting all data from Elasticsearch index: %s', index)
         query = {"query": {"match_all": {}}}
@@ -116,8 +156,17 @@ def get_es_index(es, index):
     finally:
         es.clear_scroll(scroll_id=response['_scroll_id'])
 
-# Function to get all URL IDs (hashes) from an Elasticsearch index
 def get_all_ids(es, index):
+    """
+    Retrieves all document IDs (URL hashes) from the specified Elasticsearch index.
+
+    Parameters:
+    es (Elasticsearch): The Elasticsearch client instance.
+    index (str): The name of the Elasticsearch index to query.
+
+    Returns:
+    set: A set of all document IDs (URL hashes) in the index.
+    """
     logging.info('Getting all ids from Elasticsearch index: %s', index)
     query = {"stored_fields": [], "query": {"match_all": {}}}
     response = es.search(index=index, body=query, scroll='1m', size=5000)
@@ -128,8 +177,16 @@ def get_all_ids(es, index):
     logging.info('Retrieved %d ids from Elasticsearch index: %s', len(all_ids), index)
     return set(all_ids)
 
-# Function to deduplicate the batch
 def deduplicate_batch(docs_batch):
+    """
+    Deduplicates a batch of documents based on the SHA-256 hash of their URLs.
+
+    Parameters:
+    docs_batch (list): A list of document dictionaries, each containing a 'url' key.
+
+    Returns:
+    list: A deduplicated list of documents.
+    """
     seen_hashes = set()
     deduplicated_docs = []
     for doc in docs_batch:
@@ -140,8 +197,16 @@ def deduplicate_batch(docs_batch):
             deduplicated_docs.append(doc)
     return deduplicated_docs
 
-# Helper function that returns true if >= 50% of features in dictionary failed
 def check_failure(feature_dict):
+    """
+    Checks if at least 50% of the features in the provided dictionary have failed, used for statistics.
+
+    Parameters:
+    feature_dict (dict): A dictionary where each key represents a feature and its value indicates success or failure.
+
+    Returns:
+    bool: True if 50% or more of the features have failed; False otherwise.
+    """
     total_features = len(feature_dict)
     if (total_features == 0): return False
     
