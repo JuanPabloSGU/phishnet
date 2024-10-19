@@ -8,11 +8,26 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 class Lexical: 
+    """
+    A class to extract various lexical features from a given URL.
+    
+    This class handles parsing the URL, analyzing its components, and extracting
+    features related to the length, composition, and entropy of different parts of the URL.
+    """
 
     def __init__(self) -> None:
+        """
+        Initializes the Lexical extractor by setting up the feature dictionary.
+        """
         self.feat_dict = {}
     
     def initialize_feat_dict(self, url):
+        """
+        Initializes the feature dictionary with default values for a given URL.
+        
+        Parameters:
+        url (str): The URL for which lexical features are being extracted.
+        """
         self.feat_dict = {'url': url}
         feature_names = [
             'lexical_len_url',
@@ -37,15 +52,29 @@ class Lexical:
             'lexical_character_continuity_rate_url',
             'lexical_shannon_entropy_url'
         ]
+        # Initialize the feature dictionary with default values and the URL
         for feature in feature_names:
             self.feat_dict[feature] = -1
 
     def extract(self, url):
+        """
+        Extracts all defined lexical features from the specified URL.
+
+        Parameters:
+        url (str): The URL from which to extract lexical features.
+        
+        Returns:
+        dict: A dictionary containing the extracted lexical features.
+        """
+        # Initialize the feature dictionary with default values and the URL
         self.initialize_feat_dict(url)
         try:
+            # Parse the URL into its components
             scheme, netloc, path, params, query, fragment = urlparse(url)
+            # Store the length of the full URL
             self.feat_dict['lexical_len_url'] = len(url)
 
+            # Iterate over 'netloc' and 'path' components to extract features
             for name, component in {'netloc': netloc, 'path': path}.items():
                 self.feat_dict[f'lexical_len_{name}'] = len(component)
                 self.feat_dict[f'lexical_count_digits_{name}'] = Lexical.count_digits(component)
@@ -53,6 +82,7 @@ class Lexical:
                 self.feat_dict[f'lexical_ratio_digits_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'lexical_count_digits_{name}'], url)
                 self.feat_dict[f'lexical_ratio_letters_{name}_url'] = Lexical.component_ratio(self.feat_dict[f'lexical_count_letters_{name}'], url)
 
+            # Count specific substrings within the full URL
             self.feat_dict['lexical_count_dots_url'] = Lexical.count_sub(url, '.')
             self.feat_dict['lexical_count_percent_url'] = Lexical.count_sub(url, '%')
             self.feat_dict['lexical_count_hash_url'] = Lexical.count_sub(url, '#')
