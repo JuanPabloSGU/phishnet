@@ -3,8 +3,8 @@ name: Server CI
 on:
   pull_request:
     branches: ["main"]
-  paths:
-    - "server/**"
+    paths:
+      - "server/**"
 
 permissions:
   contents: read
