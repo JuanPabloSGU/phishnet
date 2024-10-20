@@ -1,19 +1,22 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
 import "@mantine/core/styles.css";
 
 import {
+  Container,
   createTheme,
   MantineColorsTuple,
   MantineProvider,
 } from "@mantine/core";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Contact from "./pages/contact/Contact.tsx";
-import About from "./pages/about/About.tsx";
-import Login from "./pages/login/Login.tsx";
-import Callback from "./pages/login/components/Callback.tsx";
-import { AuthProvider } from "./pages/context/Auth/Auth.provider.tsx";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
+import Login from "./pages/Login";
+import Callback from "./pages/Login/Callback";
+import { AuthProvider } from "./context/Auth";
+import Header from "@layout/Header";
+import Footer from "@layout/Footer";
+import Home from "@pages/Home";
 
 const colours: MantineColorsTuple = [
   "#f3edff",
@@ -34,10 +37,10 @@ const theme = createTheme({
   },
 });
 
-const router = createBrowserRouter([
+const router = [
   {
     path: "/",
-    element: <App />,
+    element: <Home />,
   },
   {
     path: "/contact",
@@ -55,14 +58,30 @@ const router = createBrowserRouter([
     path: "/login/callback",
     element: <Callback />,
   },
-]);
+];
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MantineProvider theme={theme}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <>
+            <Header />
+            <Container>
+              <Routes>
+                {router.map((route) => (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={route.element}
+                  />
+                ))}
+              </Routes>
+            </Container>
+            <Footer />
+          </>
+        </AuthProvider>
+      </BrowserRouter>
     </MantineProvider>
   </React.StrictMode>,
 );

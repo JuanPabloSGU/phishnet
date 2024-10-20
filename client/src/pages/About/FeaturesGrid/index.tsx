@@ -1,5 +1,5 @@
-import { ThemeIcon, Text, Title, Container, SimpleGrid, rem } from '@mantine/core';
-import classes from './FeaturesGrid.module.css';
+import { ThemeIcon, Text, Title, Container, rem } from '@mantine/core';
+import classes from './index.module.css';
 
 interface FeatureProps {
     icon: React.FC<any>;
@@ -40,3 +40,5 @@ export function FeaturesGrid() {
         </Container>
     );
 }
+
+export default FeaturesGrid;
