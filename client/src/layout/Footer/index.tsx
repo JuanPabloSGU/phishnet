@@ -1,6 +1,6 @@
 import { Container, Group } from '@mantine/core';
 import { Link } from 'react-router-dom';
-import classes from './FooterSimple.module.css';
+import classes from './index.module.css';
 
 const links = [
     { link: '/about', label: 'About' },
@@ -8,7 +8,7 @@ const links = [
     { link: '/login', label: 'Login' },
 ];
 
-export function FooterSimple() {
+const Footer = () => {
     const items = links.map((link) => (
         <Link
             className={`dimmed ${classes.links}`}
@@ -28,3 +28,5 @@ export function FooterSimple() {
         </div>
     );
 }
+
+export default Footer;
