@@ -20,6 +20,7 @@ const Callback = () => {
           )}
         </p>
 
+        <p>JWT: {userInfo.id_token}</p>
         <button onClick={signout}>Log out</button>
       </div>
     );
