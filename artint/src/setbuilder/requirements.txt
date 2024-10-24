@@ -1,0 +1,6 @@
+elasticsearch
+numpy
+python-dotenv
+requests
+mlflow
+scikit-learn
