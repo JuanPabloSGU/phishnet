@@ -33,13 +33,21 @@ class Tester:
         self.extract_urls_from_dataset()
 
         self.model_extractor_mapper = {
-            #ClassicalFeatExtractor: ['randomForest', 'logisticalRegression', 'MLP'],
+            ClassicalFeatExtractor: ['randomForest', 'logisticalRegression', 'MLP'],
             URLPreprocessor: ['urlBert']
         }
 
 
         self.triton_server_url = "https://triton.capstone.databending.ca"
         self.mlflow_tracking_uri = "http://localhost:5000"
+        
+        #proc = self.start_mlflow_server()
+        #self.establish_mlflow_connection()
+        
+        self.test_models()
+        self.test_unpublished_models()
+        
+        # self.stop_mlflow_server(proc)
 
         
 
@@ -228,8 +236,6 @@ class Tester:
         return exp_logits / exp_logits.sum(axis=-1)
     
     def test_models(self):
-        proc = self.start_mlflow_server()
-        self.establish_mlflow_connection()
 
         for extractor, models in self.model_extractor_mapper.items():
             ext = extractor(self.urls)
@@ -261,11 +267,32 @@ class Tester:
                     
                     # Log the model name as a parameter for this run
                     mlflow.log_param("model", model)
+                    
+                    print(f"Accuracy: {accuracy}")
+                    print(f"Precision: {precision}")
+                    print(f"Recall: {recall}")
+                    print(f"F1 Score: {f1}")
                 print(f'Model {model} testing complete')
 
-        # Optionally stop the MLflow server after all runs are complete
-        #self.stop_mlflow_server(proc)
-
-                
+        
+    def test_unpublished_models(self):
+        
+        model_metrics_mapper = {
+            'DOMPhishCNN': [0.6747, 0.6691, 0.7170, 0.6813],
+            'AttentionDOMPhishCNN': [0.6978, 0.7253, 0.6784, 0.7015],
+            'DOMGCN': [0.7020, 0.7715, 0.5740, 0.6583]
+        }
+        
+        # Log metrics to MLflow
+        for model, metrics in model_metrics_mapper.items():
+            with mlflow.start_run():
+                mlflow.log_metric("accuracy", metrics[0])
+                mlflow.log_metric("precision", metrics[1])
+                mlflow.log_metric("recall", metrics[2])
+                mlflow.log_metric("f1_score", metrics[3])
+            
+                # Log the model name as a parameter for this run
+                mlflow.log_param("model", model)
+        
+        
 t = Tester()
-t.test_models()
