@@ -65,6 +65,73 @@ class HelloWorldResource(Resource):
 
 api.add_resource(HelloWorldResource, '/hello_world')
 
+class LLMMockResource(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'Authorization',
+                'description': 'JWT',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            },
+            {
+                'name': 'url',
+                'description': 'URL to extract lexical features from.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Lexical Features extracted and stored.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self): 
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+
+        url = get_protocol(parse_URL())
+
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        percentage = float("{:.2f}".format(uniform(0, 1)*100))
+
+        return {'message': f'{percentage}%'}
+
+
+api.add_resource(LLMMockResource, '/llm_mock')
+
 class UserResource(Resource):
     @ swag_from({
         'parameters': [
@@ -248,10 +315,8 @@ def get_protocol(url):
     if not url.startswith(('http://', 'https://')):
         try:
             res = requests.get('http://' + url, timeout=3)
-            if res.status_code == 200:
-                return res.url
-            else:
-                return None
+            res.status_code == 200
+            return res.url
         except requests.exceptions.RequestException:
             return None
 
@@ -298,8 +363,6 @@ def test_url(url):
     except requests.exceptions.RequestException:
         return False
 
-    return False
-
 class LogisticalRegression(Resource):
     @ swag_from({
         'parameters': [
@@ -339,6 +402,24 @@ class LogisticalRegression(Resource):
         },
     })
     def post(self):
+        # Authentication
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+        #End of authentication
+
         url = get_protocol(parse_URL())
 
         if url is None:
@@ -364,7 +445,7 @@ class LogisticalRegression(Resource):
         # Step 4 - Send Lexical Features to Triton
         res = triton_request(features, 'logisticalRegression', 'input')
 
-        print(res.text)
+
 
         return {'message': 'Lexical Features extracted and stored.',
                 'url': url,
@@ -414,6 +495,24 @@ class RandomForest(Resource):
         }
     })
     def post(self):
+        # Authentication
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+        #End of authentication
+
         url = get_protocol(parse_URL())
 
         if url is None:
@@ -487,6 +586,24 @@ class MLPResource(Resource):
         }
     })
     def post(self):
+        # Authentication
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+        #End of authentication
+
         url = get_protocol(parse_URL())
 
         if url is None:
@@ -559,6 +676,24 @@ class UrlBertResource(Resource):
         }
     })
     def post(self):
+        # Authentication
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+        #End of authentication
+
         url = get_protocol(parse_URL())
 
         if url is None:
