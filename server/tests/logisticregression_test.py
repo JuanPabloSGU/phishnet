@@ -35,7 +35,7 @@ def test_not_accessible_url(client):
 def test_url_already_exists(client):
     data = {
         'Content-Type': 'application/json',
-        'url': 'http://ftyvf.blogspot.li/'
+        'url': 'https://reviewe-014035.firebaseapp.com/'
     }
 
     response = client.post("/api/v1/logres", json=data, headers=generate_jwt(client))
