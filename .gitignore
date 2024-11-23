@@ -14,4 +14,4 @@ artint/src/common/*
 !artint/src/common/deep_preprocessing.ipynb
 !artint/src/common/phishformer.ipynb
 !artint/src/common/graphhtmlcnn.ipynb
-!artint/src/common/mlflow.ipynb
+!artint/src/common/hybrid.ipynb
