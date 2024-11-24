@@ -28,14 +28,14 @@ class DataLoader:
             sid = page['_scroll_id']
             scroll_size = len(page['hits']['hits'])
 
+            print(page)
+
             df_lst.append(pd.DataFrame.from_dict([document['_source'] for document in page['hits']['hits']])) # append to dataframe list
 
         self.df = pd.concat(df_lst) # concatenate dataframes
         self.df.replace(r'^\s*$', np.nan, regex=True, inplace=True) # turn empty strings to NANs
 
         print(self.df)
-
-
 
     def __len__(self):
         return len(self.df)
