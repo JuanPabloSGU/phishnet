@@ -733,3 +733,257 @@ class UrlBertResource(Resource):
                 'triton': result}
 
 api.add_resource(UrlBertResource, '/urlBert')
+
+#########################################################################################################
+
+import aiohttp
+import asyncio
+import bs4
+import networkx as nx
+from collections import deque
+from torch_geometric.utils import from_networkx
+import torch
+
+async def get_html_content(url, timeout=15, retries=3):
+    """
+    Asynchronously fetches the HTML content of the given URL with retry logic.
+
+    Parameters:
+        url (str): The URL of the web page to retrieve.
+        timeout (int): The timeout for the HTTP request in seconds.
+        retries (int): The number of retry attempts in case of failure.
+
+    Returns:
+        bytes or None: The HTML content of the web page as bytes, or None if the request fails.
+    """
+    for attempt in range(retries):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=timeout, allow_redirects=True) as response:
+                    response.raise_for_status()
+                    content = await response.read()
+                    return content
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"Attempt {attempt + 1} failed with error: {e}")
+            if attempt < retries - 1:
+                await asyncio.sleep(2 ** attempt)
+    print(f"Failed to fetch {url} after {retries} attempts.")
+    return None
+
+def parse_html(html_content):
+    """
+    Parses the HTML document and returns a DOM tree using BeautifulSoup.
+    """
+    soup = bs4.BeautifulSoup(html_content, 'html.parser')
+    return soup
+
+def build_graph(dom_tree):
+    """
+    Builds a graph representation of the HTML DOM tree.
+    Attributes text only to the most specific node that contains it.
+    """
+    if dom_tree is None:
+        return 0
+    
+    graph = nx.DiGraph()
+    queue = deque([dom_tree])
+    
+    while queue:
+        node = queue.popleft()
+        
+        if node.name:  # Only consider actual HTML tags
+            # Get direct text content (excluding nested tags' text)
+            # This gets only the text directly inside this tag, not from children
+            direct_text = ''.join(child for child in node.children 
+                                if isinstance(child, str)).strip()
+            
+            # Add node with tag and only its direct text content
+            graph.add_node(id(node), 
+                         tag=node.name,
+                         text=direct_text)
+            
+            # Add all the children of the current node
+            for child in node.children:
+                if child.name:  # Only consider valid HTML tags
+                    child_direct_text = ''.join(c for c in child.children 
+                                              if isinstance(c, str)).strip()
+                    graph.add_node(id(child), 
+                                 tag=child.name,
+                                 text=child_direct_text)
+                    graph.add_edge(id(node), id(child))
+                    queue.append(child)
+    
+    return graph
+
+def process_html_file(html_content):
+        
+    text = str(html_content)
+    # Parse the HTML document into a DOM tree
+    dom_tree = parse_html(text)
+    # Build the graph from the DOM tree
+    graph = build_graph(dom_tree)
+    return [graph], [text]
+
+
+HTML_TAGS = [
+    # Basic structure
+    'html', 'head', 'body', 'title', 'meta',
+    
+    # Headers
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    
+    # Text content
+    'p', 'span', 'div', 'br', 'hr',
+    
+    # Links and media
+    'a', 'img', 'iframe', 'video', 'audio',
+    
+    # Lists
+    'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+    
+    # Tables
+    'table', 'tr', 'td', 'th', 'thead', 'tbody',
+    
+    # Forms - important for phishing
+    'form', 'input', 'button', 'select', 'option', 'textarea', 'label',
+    
+    # Scripts and styling
+    'script', 'style', 'link', 'noscript',
+    
+    # Semantic elements
+    'nav', 'header', 'footer', 'main', 'section', 'article'
+]
+
+# Function to one-hot encode the HTML tags
+def one_hot_encode_tag(tag, tag_set):
+    encoding = np.zeros(len(tag_set))
+    if tag in tag_set:
+        encoding[tag_set.index(tag)] = 1
+    return encoding
+
+# Convert the networkx graph to PyG data format and prepare node features
+def convert_to_pyg_graph(graph):
+    # Prepare node features (one-hot encoded tags and text presence)
+    node_features = []
+    for node, data in graph.nodes(data=True):
+        tag = data['tag']  # Get the tag
+        text = data['text']  # Get the text content
+        
+        # One-hot encode the tag
+        tag_encoding = one_hot_encode_tag(tag, HTML_TAGS)
+        
+        # Add binary feature for text presence
+        has_text = 1.0 if text.strip() else 0.0
+        
+        # Combine features
+        features = np.append(tag_encoding, has_text)
+        node_features.append(features)
+
+    # Convert node features to a tensor
+    node_features = torch.tensor(node_features, dtype=torch.float32)
+
+    # Convert networkx graph to a PyTorch Geometric graph
+    pyg_graph = from_networkx(graph)
+    pyg_graph.x = node_features
+
+    return pyg_graph
+
+# Function to process and convert all graphs in the list
+def convert_all_graphs_to_pyg(graphs):
+    pyg_graphs = []
+    for i, graph in enumerate(graphs):
+        pyg_graph = convert_to_pyg_graph(graph)  # Convert each networkx graph to PyG format
+        pyg_graphs.append(pyg_graph)  # Store the converted PyG graph
+    
+    return pyg_graphs
+
+
+class HTMLGCNCNN(Resource):
+    @ swag_from({
+        'parameters': [
+            {
+                'name': 'url',
+                'description': 'URL to make inference.',
+                'in': 'formData',
+                'type': 'string',
+                'required': True
+            },
+            {
+                'name': 'Authorization',
+                'description': 'JWT Token',
+                'in': 'header',
+                'type': 'string',
+                'required': True
+            }
+        ],
+        'responses': {
+            200: {
+                'description': 'Inference to urlBert.',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string'
+                        },
+                        'url': {
+                            'type': 'string'
+                        },
+                        'data': {
+                            'type': 'object'
+                        }
+                    }
+                }
+            }
+        }
+    })
+    def post(self):
+        # Authentication
+        auth_header = request.headers.get('Authorization', None)
+        if not auth_header:
+            return {'message': 'Authorization header is required.'}
+
+        parts = auth_header.split()
+        if parts[0].lower() == 'bearer' and len(parts) != 2:
+            return {'message': 'Token must be present with Bearer.'}
+        elif parts[0].lower() != 'bearer' or len(parts) != 2:
+            return {'message': 'Authorization header must start with Bearer.'}
+
+        token = parts[1]
+
+        jwt = verify_jwt(token)
+        if not jwt:
+            return {'message': 'Invalid token.'}
+        #End of authentication
+
+        url = get_protocol(parse_URL())
+
+        if url is None:
+            return {'message': 'URL is invalid.'}
+
+        if not test_url(url):
+            return {'message': 'URL is not accessible.'}
+
+        res = search_url(url, 'raw2')
+        if res['hits']['total']['value'] > 0:
+            return {
+                'message': 'URL already exists in Elasticsearch.',
+                'url': url
+            }
+        
+        html_content = get_html_content(url)
+        graphs, texts = process_html_file(html_content)
+        pyg_graphs = convert_all_graphs_to_pyg(graphs)
+        
+
+        # Step 3 - Send tokens to Triton
+        res = triton_request_htmlgcncnn()
+    
+        # Replace the logit answer into a probablity between 0 and 1
+        result = res.json()
+
+        return {'message': 'Url Inference complete.',
+                'url': url,
+                'data': input_ids.tolist(),
+                'triton': result}
+
+api.add_resource(HTMLGCNCNN, '/htmlgcncnn')

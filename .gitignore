@@ -9,3 +9,4 @@ venv
 .vscode
 **/__pycache__
 artint/src/setbuilder/mlflow.db
+artint/src/common/*
