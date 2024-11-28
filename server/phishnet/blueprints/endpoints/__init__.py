@@ -311,6 +311,65 @@ def triton_requestBert(input_ids, attention_mask):
     # Send the request
     return requests.post(inference_url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
 
+def triton_request_htmlgcncnn(graph, cnn_input):
+    """
+    Sends a request to the Triton server with the provided graph and CNN input.
+
+    Args:
+        graph (dict): A dictionary containing 'x', 'edge_index', and 'batch' tensors of the graph.
+        cnn_input (tensor): A tensor representing the CNN input.
+
+    Returns:
+        Response: The response from the Triton server.
+    """
+    triton_server_url = "https://triton.capstone.databending.ca"
+    inference_url = f"{triton_server_url}/v2/models/htmlGraphCnn/infer"
+
+    # Convert graph components and CNN input to lists for JSON payload
+    graph_data_x = graph['x'].numpy().tolist()
+    graph_edge_index = graph['edge_index'].numpy().tolist()
+    graph_batch = graph['batch'].numpy().tolist()
+    cnn_input_data = cnn_input.numpy().tolist()
+
+    # Build the payload for Triton server
+    payload = {
+        "inputs": [
+            {
+                "name": "graph_data.x",
+                "shape": list(graph['x'].shape),
+                "datatype": "FP32",
+                "data": graph_data_x
+            },
+            {
+                "name": "graph_data.edge_index",
+                "shape": list(graph['edge_index'].shape),
+                "datatype": "INT64",
+                "data": graph_edge_index
+            },
+            {
+                "name": "graph_data.batch",
+                "shape": list(graph['batch'].shape),
+                "datatype": "INT64",
+                "data": graph_batch
+            },
+            {
+                "name": "x_seq",
+                "shape": list(cnn_input.shape),
+                "datatype": "INT64",
+                "data": cnn_input_data
+            }
+        ]
+    }
+
+    # Send the POST request to the Triton server
+    response = requests.post(
+        inference_url, 
+        data=json.dumps(payload), 
+        headers={"Content-Type": "application/json"}
+    )
+
+    return response
+
 def get_protocol(url):
     if not url.startswith(('http://', 'https://')):
         try:
@@ -897,6 +956,40 @@ def convert_all_graphs_to_pyg(graphs):
     
     return pyg_graphs
 
+def normalize_token(token):
+    """
+    Normalize tokens by lowercasing and stripping excessive whitespace.
+    """
+    return token.lower().strip()
+
+def encode_html(html_string, token_to_idx, max_tokens=100):
+    """
+    Convert HTML string to token index sequence with normalization.
+    """
+    tokens = []
+    soup = bs4.BeautifulSoup(html_string, 'html.parser')
+
+    for element in soup.descendants:
+        if element.name:
+            tokens.append(normalize_token(f"<{element.name}>"))
+            for attr in ['href', 'src', 'class', 'id']:
+                if attr in element.attrs:
+                    value = str(element.attrs[attr])[:30]  # Cap length of attribute values
+                    tokens.append(normalize_token(f"{attr}={value}"))
+        elif isinstance(element, bs4.NavigableString):
+            text = normalize_token(str(element))
+            if text:
+                tokens.extend(text.split())
+
+    # Convert tokens to indices
+    indices = [token_to_idx.get(token, token_to_idx['<unk>']) for token in tokens[:max_tokens]]
+
+    # Pad to max_tokens
+    if len(indices) < max_tokens:
+        indices += [token_to_idx['<pad>']] * (max_tokens - len(indices))
+
+    return torch.tensor(indices, dtype=torch.long)
+
 
 class HTMLGCNCNN(Resource):
     @ swag_from({
@@ -972,18 +1065,23 @@ class HTMLGCNCNN(Resource):
         
         html_content = get_html_content(url)
         graphs, texts = process_html_file(html_content)
-        pyg_graphs = convert_all_graphs_to_pyg(graphs)
-        
+        pyg_graph = convert_all_graphs_to_pyg(graphs)
 
+        vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
+        with open(vocab_path, 'r') as f:
+            token_to_idx = json.load(f)
+
+        encoded = encode_html(texts[0], token_to_idx)
+        cnn_input = [encoded]
+        
         # Step 3 - Send tokens to Triton
-        res = triton_request_htmlgcncnn()
+        res = triton_request_htmlgcncnn(pyg_graph, cnn_input)
     
         # Replace the logit answer into a probablity between 0 and 1
         result = res.json()
 
         return {'message': 'Url Inference complete.',
                 'url': url,
-                'data': input_ids.tolist(),
-                'triton': result}
+                'triton': result.json()}
 
 api.add_resource(HTMLGCNCNN, '/htmlgcncnn')
