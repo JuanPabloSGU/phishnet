@@ -119,11 +119,11 @@ class DOM:
             except asyncio.TimeoutError:
                 logging.error(f"DOM.py: Request timed out when submitting URL: {url}")
                 return None
-            except aiohttp.ClientError as e:
-                logging.error(f"DOM.py: Client error occurred when submitting URL {url}: {e}")
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when submitting URL {url}")
                 return None
-            except Exception as e:
-                logging.error(f"DOM.py: Unexpected error occurred when submitting URL {url}: {e}")
+            except Exception:
+                logging.error(f"DOM.py: Unexpected error occurred when submitting URL {url}")
                 return None
 
     async def get_result(self, uuid: str, retries: int):
@@ -174,8 +174,8 @@ class DOM:
                         # Unexpected status code
                         logging.error(f"DOM.py: Error fetching result for UUID {uuid}: HTTP {response.status}")
                         return None
-            except aiohttp.ClientError as e:
-                logging.error(f"DOM.py: Client error occurred when fetching result for UUID {uuid}: {e}")
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when fetching result for UUID {uuid}")
                 return None
             except asyncio.TimeoutError:
                 logging.error(f"DOM.py: Request timed out when fetching result for UUID {uuid}")
@@ -231,8 +231,8 @@ class DOM:
                         # Unexpected status code
                         logging.error(f"DOM.py: Error fetching DOM snapshot for UUID {uuid}: HTTP {response.status}")
                         return None
-            except aiohttp.ClientError as e:
-                logging.error(f"DOM.py: Client error occurred when fetching DOM snapshot for UUID {uuid}: {e}")
+            except aiohttp.ClientError:
+                logging.error(f"DOM.py: Client error occurred when fetching DOM snapshot for UUID {uuid}")
                 return None
             except asyncio.TimeoutError:
                 logging.error(f"DOM.py: Request timed out when fetching DOM snapshot for UUID {uuid}")

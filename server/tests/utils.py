@@ -1,15 +1,10 @@
-def generate_jwt(client):
-    data = {
-        'Content-Type': 'application/json',
-        'username': 'test',
-        'password': 'password'
-    }
+import dotenv
+import os
 
-    response = client.post("/api/v1/login", json=data)
-    access_token = response.json["access_token"]
+def generate_jwt(client):
 
     headers = {
-        "Authorization": f"Bearer {access_token}"
+        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjI5NTcyOTA5MTgwODY1NjkyMSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3ppdGFkZWwuZGF0YWJlbmRpbmcuY2EiLCJzdWIiOiIyODgwMzQwNjE1ODUyODQ2MjciLCJhdWQiOlsiMjg3MjcyNTExOTkxODQwMjc1IiwiMjg4Mjk2MzI2MDQ1NzYxMDQzIiwiMjg3MjcyMzUzMjk2MDg4NTk1Il0sImV4cCI6MTczMjgxNDc1OSwiaWF0IjoxNzMyNzcxNTU5LCJhdXRoX3RpbWUiOjE3MzI3NjQyNzIsImFtciI6WyJwd2QiXSwiYXpwIjoiMjg3MjcyNTExOTkxODQwMjc1IiwiY2xpZW50X2lkIjoiMjg3MjcyNTExOTkxODQwMjc1IiwiYXRfaGFzaCI6IlV3Y29vVXpySThaM09SV3FKSDZyYmciLCJzaWQiOiJWMV8yOTAzMjMwNzUxMDk1NTE2MzUiLCJuYW1lIjoiVGVzdCBDYXBzdG9uZSIsImdpdmVuX25hbWUiOiJUZXN0IiwiZmFtaWx5X25hbWUiOiJDYXBzdG9uZSIsImxvY2FsZSI6bnVsbCwidXBkYXRlZF9hdCI6MTcyODE3NzY4MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiVGVzdENhcHN0b25lIiwiZW1haWwiOiJ0ZXN0QGRhdGFiZW5kaW5nLmNhIiwiZW1haWxfdmVyaWZpZWQiOnRydWV9.kjVrI_EHgkT0sBeD8mR_V6E--MWiLSUiOxUhEAXMGrWP6ZIcbakHQ6f8cd1PCH7f0hEsFB1GDuJuHYS3UgT0ttnlILOxkb7_sxLliyuZm9xilnvFJrx1rM-zUC16nObe9uB0jnWCwX74G8nVK5n9mDkrBByuowWnSm7qE_OeaXSKtNqoweOEmf4WpQZPGit_xCm6stHj6b4auYxYNj3JWF2F2Lh0b7ZVzsyrNPtj1yBYUMvwp09XfWEo9YugtvUkpUXnZ_J70bNRjLWTJZOjbYHSpMQj8vcOEpbFiV_Wtdz9imxeM5a3CtZ1Umlfwu1Chec3_VQSLuM3Hz8qXdK3gw"
     }
 
     return headers
