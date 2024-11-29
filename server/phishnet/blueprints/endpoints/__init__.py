@@ -492,9 +492,12 @@ class LogisticalRegression(Resource):
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
+            first_hit = res['hits']['hits'][0]
+            type_value = first_hit['_source']['type']
             return {
-                'message': 'URL already exists in Elasticsearch.',
-                'url': url
+                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'url': url,
+                'triton': str(type_value)
             }
 
         lexical = Lexical()
@@ -585,9 +588,12 @@ class RandomForest(Resource):
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
+            first_hit = res['hits']['hits'][0]
+            type_value = first_hit['_source']['type']
             return {
-                'message': 'URL already exists in Elasticsearch.',
-                'url': url
+                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'url': url,
+                'triton': str(type_value)
             }
 
         lexical = Lexical()
@@ -676,9 +682,12 @@ class MLPResource(Resource):
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
+            first_hit = res['hits']['hits'][0]
+            type_value = first_hit['_source']['type']
             return {
-                'message': 'URL already exists in Elasticsearch.',
-                'url': url
+                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'url': url,
+                'triton': str(type_value)
             }
 
         lexical = Lexical()
@@ -766,9 +775,12 @@ class UrlBertResource(Resource):
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
+            first_hit = res['hits']['hits'][0]
+            type_value = first_hit['_source']['type']
             return {
-                'message': 'URL already exists in Elasticsearch.',
-                'url': url
+                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'url': url,
+                'triton': str(type_value)
             }
 
         # Set the url in the proper format
@@ -1049,9 +1061,12 @@ class HTMLGCNCNN(Resource):
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
+            first_hit = res['hits']['hits'][0]
+            type_value = first_hit['_source']['type']
             return {
-                'message': 'URL already exists in Elasticsearch.',
-                'url': url
+                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'url': url,
+                'triton': str(type_value)
             }
         
         html_content = get_html_content(url)
