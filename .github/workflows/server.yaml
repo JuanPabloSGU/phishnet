@@ -43,3 +43,8 @@ jobs:
         run: |
           coverage run -m pytest server/tests/
           coverage report -m
+      - name: Clean up temporary files
+        run: |
+          echo "Cleaning up temporary files"
+          # Remove temporary file causing issues
+          rm -rf /tmp/tmp_f3j02mu/
