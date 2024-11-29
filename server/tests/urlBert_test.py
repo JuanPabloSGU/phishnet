@@ -41,7 +41,7 @@ def test_url_already_exists(client):
 def test_triton_urlBert(client):
     data = {
         'Content-Type': 'application/json',
-        'url': 'http://www.google.com',
+        'url': 'http://www.google.ca',
     }
 
     response = client.post("/api/v1/urlBert", json=data, headers=generate_jwt(client))

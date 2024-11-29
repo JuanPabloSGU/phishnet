@@ -781,7 +781,7 @@ class UrlBertResource(Resource):
         result = res.json()
         logits = np.array(result['outputs'][0]['data'])
         prediction = tf.nn.softmax(logits, axis=-1)[1]
-        #label = tf.argmax(prediction, axis=-1).numpy()
+
         prediction = [prediction.numpy().item()] 
 
         result['outputs'][0]['data'] = str(prediction)
@@ -802,30 +802,18 @@ import networkx as nx
 from collections import deque
 from torch_geometric.utils import from_networkx
 import torch
+import time
 
-async def get_html_content(url, timeout=15, retries=3):
-    """
-    Asynchronously fetches the HTML content of the given URL with retry logic.
-
-    Parameters:
-        url (str): The URL of the web page to retrieve.
-        timeout (int): The timeout for the HTTP request in seconds.
-        retries (int): The number of retry attempts in case of failure.
-
-    Returns:
-        bytes or None: The HTML content of the web page as bytes, or None if the request fails.
-    """
+def get_html_content(url, timeout=15, retries=3):
     for attempt in range(retries):
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=timeout, allow_redirects=True) as response:
-                    response.raise_for_status()
-                    content = await response.read()
-                    return content
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+            return response.content
+        except requests.RequestException as e:
             print(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:
-                await asyncio.sleep(2 ** attempt)
+                time.sleep(2 ** attempt)
     print(f"Failed to fetch {url} after {retries} attempts.")
     return None
 
@@ -1064,24 +1052,49 @@ class HTMLGCNCNN(Resource):
             }
         
         html_content = get_html_content(url)
-        graphs, texts = process_html_file(html_content)
-        pyg_graph = convert_all_graphs_to_pyg(graphs)
 
-        vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
-        with open(vocab_path, 'r') as f:
-            token_to_idx = json.load(f)
+        if html_content is None:
+            
+            # Set the url in the proper format
+            transformedInput = urlFormatting(url)
 
-        encoded = encode_html(texts[0], token_to_idx)
-        cnn_input = [encoded]
+            # Create the input and attention mask for inference
+            input_ids, attention_mask = retrieveTokenizer(transformedInput)
+            
+            # Step 3 - Send tokens to Triton
+            res = triton_requestBert(input_ids, attention_mask)
         
-        # Step 3 - Send tokens to Triton
-        res = triton_request_htmlgcncnn(pyg_graph, cnn_input)
-    
-        # Replace the logit answer into a probablity between 0 and 1
+        else:
+            graphs, texts = process_html_file(html_content)
+            pyg_graph = convert_all_graphs_to_pyg(graphs)
+
+            vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
+            with open(vocab_path, 'r') as f:
+                token_to_idx = json.load(f)
+
+            encoded = encode_html(texts[0], token_to_idx)
+            print(encoded.shape)
+
+            graph = {
+                'x': pyg_graph[0]['x'],
+                'edge_index': pyg_graph[0]['edge_index'],
+                'batch': torch.zeros(pyg_graph[0]['num_nodes'], dtype=torch.long)
+            }
+            
+            # Step 3 - Send tokens to Triton
+            res = triton_request_htmlgcncnn(graph, encoded.unsqueeze(0))
+        
         result = res.json()
+        
+        logits = np.array(result['outputs'][0]['data'])
+        prediction = tf.nn.softmax(logits, axis=-1)[1]
+
+        prediction = [prediction.numpy().item()] 
+
+        result['outputs'][0]['data'] = str(prediction)
 
         return {'message': 'Url Inference complete.',
                 'url': url,
-                'triton': result.json()}
+                'triton': result}
 
-api.add_resource(HTMLGCNCNN, '/htmlgcncnn')
+api.add_resource(HTMLGCNCNN, '/htmlGraphCnn')
