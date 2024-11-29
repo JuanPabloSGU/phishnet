@@ -1068,7 +1068,11 @@ class HTMLGCNCNN(Resource):
             graphs, texts = process_html_file(html_content)
             pyg_graph = convert_all_graphs_to_pyg(graphs)
 
-            vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
+            import os
+            
+            print(os.path.dirname(__file__))
+            vocab_path = os.path.join(os.path.dirname(__file__), '..', 'utils', 'token_to_idx.json')
+            #vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
             with open(vocab_path, 'r') as f:
                 token_to_idx = json.load(f)
 
