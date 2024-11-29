@@ -1,4 +1,5 @@
 import json
+import time
 from random import uniform
 import requests
 import numpy as np
@@ -113,9 +114,9 @@ class LLMMockResource(Resource):
 
         token = parts[1]
 
-        jwt = verify_jwt(token)
-        if not jwt:
-            return {'message': 'Invalid token.'}
+        # jwt = verify_jwt(token)
+        # if not jwt:
+        #     return {'message': 'Invalid token.'}
 
         url = parse_URL()
         
@@ -124,6 +125,8 @@ class LLMMockResource(Resource):
 
         percentage = float("{:.2f}".format(uniform(0, 1)*100))
 
+        # wait between 500ms and 2s 
+        time.sleep(uniform(0.1, 1))
         return {'message': f'{percentage}%'}
 
 
