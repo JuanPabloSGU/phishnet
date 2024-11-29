@@ -1070,14 +1070,13 @@ class HTMLGCNCNN(Resource):
 
             import os
             
-            print(os.path.dirname(__file__))
+            # Use dynamic pathing to the file
             vocab_path = os.path.join(os.path.dirname(__file__), '..', 'utils', 'token_to_idx.json')
-            #vocab_path = 'phishnet/blueprints/utils/token_to_idx.json'
+
             with open(vocab_path, 'r') as f:
                 token_to_idx = json.load(f)
 
             encoded = encode_html(texts[0], token_to_idx)
-            print(encoded.shape)
 
             graph = {
                 'x': pyg_graph[0]['x'],
