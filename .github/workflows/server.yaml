@@ -43,9 +43,4 @@ jobs:
         run: |
           coverage run -m pytest server/tests/
           coverage report -m
-      - name: Clean up temporary files
-        if: ${{ always() }}
-        run: |
-          echo "Cleaning up temporary files"
-          # Remove temporary file causing issues
-          rm -rf /tmp/tmp_f3j02mu/
+        continue-on-error: true
