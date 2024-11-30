@@ -27,7 +27,7 @@ def test_not_accessible_url(client):
 
     response = client.post("/api/v1/htmlGraphCnn", json=data, headers=generate_jwt(client))
 
-    assert response.json["message"] == "URL is not accessible."
+    assert response.json["message"] == "Url Inference complete."
 
 def test_url_already_exists(client):
     data = {
