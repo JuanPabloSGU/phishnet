@@ -16,7 +16,7 @@ def create_app():
 
 def start_server():
     app = create_app()
-    app.run()
+    app.run(port=0)
 
 
 if __name__ == '__main__':
