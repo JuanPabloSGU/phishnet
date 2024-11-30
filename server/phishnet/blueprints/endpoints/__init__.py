@@ -819,7 +819,7 @@ from torch_geometric.utils import from_networkx
 import torch
 import time
 
-def get_html_content(url, timeout=15, retries=3):
+def get_html_content(url, timeout=5, retries=2):
     for attempt in range(retries):
         try:
             response = requests.get(url, timeout=timeout)
@@ -1056,8 +1056,8 @@ class HTMLGCNCNN(Resource):
         if url is None:
             return {'message': 'URL is invalid.'}
 
-        if not test_url(url):
-            return {'message': 'URL is not accessible.'}
+        # if not test_url(url):
+        #     return {'message': 'URL is not accessible.'}
 
         res = search_url(url, 'raw2')
         if res['hits']['total']['value'] > 0:
@@ -1069,9 +1069,7 @@ class HTMLGCNCNN(Resource):
                 'triton': str(type_value)
             }
         
-        html_content = get_html_content(url)
-
-        if html_content is None:
+        if not test_url(url):
             
             # Set the url in the proper format
             transformedInput = urlFormatting(url)
@@ -1083,6 +1081,8 @@ class HTMLGCNCNN(Resource):
             res = triton_requestBert(input_ids, attention_mask)
         
         else:
+            html_content = get_html_content(url)
+            
             graphs, texts = process_html_file(html_content)
             pyg_graph = convert_all_graphs_to_pyg(graphs)
 
