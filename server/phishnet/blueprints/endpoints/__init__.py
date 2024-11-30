@@ -508,7 +508,7 @@ class LogisticalRegression(Resource):
             }
 
             return {
-                'message': 'Lexical Features extracted and stored.',
+                'message': 'URL already exists in Elasticsearch, returning known result.',
                 'url': url,
                 'triton': triton_response
             }
@@ -619,7 +619,7 @@ class RandomForest(Resource):
             }
 
             return {
-                'message': 'Lexical Features extracted and stored.',
+                'message': 'URL already exists in Elasticsearch, returning known result.',
                 'url': url,
                 'triton': triton_response
             }
@@ -728,7 +728,7 @@ class MLPResource(Resource):
             }
 
             return {
-                'message': 'Lexical Features extracted and stored.',
+                'message': 'URL already exists in Elasticsearch, returning known result.',
                 'url': url,
                 'triton': triton_response
             }
@@ -836,7 +836,7 @@ class UrlBertResource(Resource):
             }
 
             return {
-                'message': 'Url Inference complete.',
+                'message': 'URL already exists in Elasticsearch, returning known result.',
                 'url': url,
                 'triton': triton_response
             }
@@ -1137,7 +1137,7 @@ class HTMLGCNCNN(Resource):
             }
 
             return {
-                'message': 'Url Inference complete.',
+                'message': 'URL already exists in Elasticsearch, returning known result.',
                 'url': url,
                 'triton': triton_response
             }
