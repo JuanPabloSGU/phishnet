@@ -39,7 +39,7 @@ def test_url_already_exists(client):
     }
 
     response = client.post("/api/v1/randforest", json=data, headers=generate_jwt(client))
-    assert response.json["message"] == "URL already exists in Elasticsearch."
+    assert response.json["message"] == "URL already exists in Elasticsearch, returning known result."
 
 
 def test_get_protocol_https(client):
