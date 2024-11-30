@@ -494,10 +494,23 @@ class LogisticalRegression(Resource):
         if res['hits']['total']['value'] > 0:
             first_hit = res['hits']['hits'][0]
             type_value = first_hit['_source']['type']
+            triton_response = {
+                "model_name": "logisticalRegression",
+                "model_version": "1",
+                "outputs": [
+                    {
+                        "name": "logits",
+                        "datatype": "FP32",
+                        "shape": [1, 2],
+                        "data": str([float(type_value)])
+                    }
+                ]
+            }
+
             return {
-                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'message': 'Lexical Features extracted and stored.',
                 'url': url,
-                'triton': str(type_value)
+                'triton': triton_response
             }
 
         lexical = Lexical()
@@ -590,10 +603,25 @@ class RandomForest(Resource):
         if res['hits']['total']['value'] > 0:
             first_hit = res['hits']['hits'][0]
             type_value = first_hit['_source']['type']
+
+            # Construct the triton response
+            triton_response = {
+                "model_name": "randomForest",
+                "model_version": "1",
+                "outputs": [
+                    {
+                        "name": "predictions",
+                        "datatype": "FP32",
+                        "shape": [1, 2],
+                        "data": str([float(type_value)])
+                    }
+                ]
+            }
+
             return {
-                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'message': 'Lexical Features extracted and stored.',
                 'url': url,
-                'triton': str(type_value)
+                'triton': triton_response
             }
 
         lexical = Lexical()
@@ -684,10 +712,25 @@ class MLPResource(Resource):
         if res['hits']['total']['value'] > 0:
             first_hit = res['hits']['hits'][0]
             type_value = first_hit['_source']['type']
+
+            # Construct the triton response
+            triton_response = {
+                "model_name": "MLP",
+                "model_version": "1",
+                "outputs": [
+                    {
+                        "name": "predictions",
+                        "datatype": "FP32",
+                        "shape": [1, 2],
+                        "data": str([float(type_value)])
+                    }
+                ]
+            }
+
             return {
-                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'message': 'Lexical Features extracted and stored.',
                 'url': url,
-                'triton': str(type_value)
+                'triton': triton_response
             }
 
         lexical = Lexical()
@@ -777,10 +820,25 @@ class UrlBertResource(Resource):
         if res['hits']['total']['value'] > 0:
             first_hit = res['hits']['hits'][0]
             type_value = first_hit['_source']['type']
+
+            # Construct the triton response
+            triton_response = {
+                "model_name": "urlBert",
+                "model_version": "2",
+                "outputs": [
+                    {
+                        "name": "logits",
+                        "datatype": "FP32",
+                        "shape": [1, 2],
+                        "data": str([float(type_value)])
+                    }
+                ]
+            }
+
             return {
-                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'message': 'Url Inference complete.',
                 'url': url,
-                'triton': str(type_value)
+                'triton': triton_response
             }
 
         # Set the url in the proper format
@@ -1063,10 +1121,25 @@ class HTMLGCNCNN(Resource):
         if res['hits']['total']['value'] > 0:
             first_hit = res['hits']['hits'][0]
             type_value = first_hit['_source']['type']
+
+            # Construct the triton response
+            triton_response = {
+                "model_name": "htmlGraphCnn",
+                "model_version": "1",
+                "outputs": [
+                    {
+                        "name": "predictions",
+                        "datatype": "FP32",
+                        "shape": [1, 2],
+                        "data": str([float(type_value)])
+                    }
+                ]
+            }
+
             return {
-                'message': 'URL already exists in Elasticsearch, returning known result.',
+                'message': 'Url Inference complete.',
                 'url': url,
-                'triton': str(type_value)
+                'triton': triton_response
             }
         
         html_content = get_html_content(url)
