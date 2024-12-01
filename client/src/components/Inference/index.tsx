@@ -21,9 +21,9 @@ type Triton = {
 };
 
 const models = [
-  { label: "Logistic Regression", value: "/logres" },
-  { label: "Random Forest", value: "/randforest" },
-  { label: "Multi-layer Perceptron", value: "/mlp" },
+
+  { label: "Bert", value: "/urlBert" },
+  { label: "Graph CNN", value: "/htmlGraphCnn" },
 ];
 
 export function Inference() {
@@ -54,7 +54,7 @@ export function Inference() {
       },
     })
       .then(function(response) {
-        const result = response.data["triton"]["outputs"][0]["data"];
+        const result = parseFloat(response.data["triton"]["outputs"][0]["data"].split("[")[1].split("]")[0]);
         let msg = "";
 
         if (result > 0.5) {
