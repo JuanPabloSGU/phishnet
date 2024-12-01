@@ -18,7 +18,8 @@ type Triton = {
 export function InferenceResult(props: Triton) {
   const theme = useMantineTheme();
   const url = props.props.url;
-  const value = Number(props.props.value[0]);
+  console.log(props);
+  const value = Number(props.props.value);
   const message = props.props.message;
 
   return (

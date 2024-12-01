@@ -18,7 +18,8 @@ const AuthProvider: React.FC<{ children: ReactElement }> = (
     const config: ZitadelConfig = {
         authority: "https://zitadel.databending.ca",
         client_id: "287272511991840275",
-        redirect_uri: "http://localhost:5173/login/callback",
+        redirect_uri: "https://capstone.databending.ca/login/callback",
+        // redirect_uri: "http://localhost:5173/login/callback",
     };
 
     const zitadel = createZitadelAuth(config);

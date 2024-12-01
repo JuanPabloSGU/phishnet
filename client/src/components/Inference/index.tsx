@@ -11,6 +11,7 @@ import { useState } from "react";
 import classes from "./index.module.css";
 import axios from "axios";
 import InferenceResult from "@components/InferenceResult";
+import { useAuth } from "@context/Auth";
 
 type Triton = {
   url: string;
@@ -20,9 +21,9 @@ type Triton = {
 };
 
 const models = [
-  { label: "Logistic Regression", value: "/logres" },
-  { label: "Random Forest", value: "/randforest" },
-  { label: "Multi-layer Perceptron", value: "/mlp" },
+
+  { label: "Bert", value: "/urlBert" },
+  { label: "Graph CNN", value: "/htmlGraphCnn" },
 ];
 
 export function Inference() {
@@ -30,16 +31,18 @@ export function Inference() {
   const [model, setModel] = useState("/logres");
   const [resultStream, setResultStream] = useState<Triton>();
   const [invalidURL, isInvalidURL] = useState("");
-
+  const { userInfo } = useAuth();
+ 
   const handleInferece = () => {
     if (url === "") {
       return;
     }
 
-    const target = "http://localhost:5000/api/v1" + model;
+    const target = "https://api.capstone.databending.ca/api/v1" + model;
 
-    const token = localStorage.getItem("jwt");
+    const token = userInfo?.id_token;
 
+    console.log(userInfo?.id_token)
     axios({
       method: "post",
       url: target,
@@ -51,7 +54,7 @@ export function Inference() {
       },
     })
       .then(function(response) {
-        const result = response.data["triton"]["outputs"][0]["data"];
+        const result = parseFloat(response.data["triton"]["outputs"][0]["data"].split("[")[1].split("]")[0]);
         let msg = "";
 
         if (result > 0.5) {
