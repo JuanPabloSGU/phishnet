@@ -41,6 +41,7 @@ jobs:
           echo JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} >> server/.env
       - name: Run tests
         run: |
+          rm -f .coverage 
           coverage run -m pytest server/tests/
           coverage report -m
         continue-on-error: true
