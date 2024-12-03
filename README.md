@@ -49,7 +49,7 @@ Key components of PhishNet include:
 ## Installation
 
 ### Website Access
-1. Open your browser and navigate to the [PhishNet Website](#).
+1. Open your browser and navigate to the [PhishNet Website](https://capstone.databending.ca/).
 2. Register or log in to your account to start analyzing URLs.
 
 ### Chrome Extension
