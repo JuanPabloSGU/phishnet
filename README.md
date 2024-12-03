@@ -1,6 +1,6 @@
 # PhishNet
 
-PhishNet is a cutting-edge Machine Learning-based tool designed to protect users from phishing attacks. By leveraging advanced models like HTMLGCNCNN and URLBERT, PhishNet provides real-time phishing detection through a user-friendly website and Chrome extension.
+PhishNet is a Machine Learning tool designed to protect users from phishing attacks. By leveraging advanced models like HTMLGCNCNN and URLBERT, PhishNet provides real-time phishing detection through a user-friendly website and Chrome extension.
 
 ---
 
@@ -13,7 +13,7 @@ PhishNet is a cutting-edge Machine Learning-based tool designed to protect users
 - [Usage](#usage)
   - [Website](#website)
   - [Chrome Extension](#chrome-extension)
-- [Architecture](#architecture)
+- [ML Model Architecture](#ml-model-architecture)
   - [HTMLGCNCNN](#htmlgcncnn)
   - [URLBERT](#urlbert)
 - [Contact](#contact)
@@ -23,12 +23,11 @@ PhishNet is a cutting-edge Machine Learning-based tool designed to protect users
 ## Project Overview
 
 Phishing attacks are one of the most common cyber threats, where malicious websites deceive users into revealing confidential information. PhishNet aims to combat this growing issue by detecting phishing websites using Machine Learning models and making these tools accessible to users through:
-- A **web-based platform** for analyzing URLs.
+- A **website** for analyzing URLs.
 - A **Chrome extension** for real-time phishing detection while browsing.
 
 Key components of PhishNet include:
 - Advanced Machine Learning models (**HTMLGCNCNN** and **URLBERT**) tailored for phishing detection.
-- Integration with Elasticsearch and AWS S3 for scalable storage and model deployment.
 - Comprehensive tools for manual and automatic phishing detection.
 
 ---
@@ -44,11 +43,6 @@ Key components of PhishNet include:
 - **Manual URL Submission**: Analyze links directly from your browser.
 - **Automatic Link Detection**: Scans webpages for phishing links in real time.
 - Notifications for detected phishing links.
-
-### **Other Highlights**
-- **Real-time Detection**: Instant results for analyzed URLs.
-- **Secure Storage**: Backend infrastructure supported by Elasticsearch and AWS S3.
-- **User-Friendly Design**: Seamless integration with frontend and backend systems.
 
 ---
 
@@ -85,7 +79,7 @@ Key components of PhishNet include:
 
 ---
 
-## Architecture
+## ML Model Architecture
 
 ### **HTMLGCNCNN**
 The HTMLGCNCNN model integrates Convolutional Neural Networks (CNN) and GraphSAGE to handle:
